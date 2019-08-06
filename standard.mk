@@ -26,7 +26,7 @@ OPERATOR_DOCKERFILE ?=build/Dockerfile
 
 BINFILE=build/_output/bin/$(OPERATOR_NAME)
 MAINPACKAGE=./cmd/manager
-GOENV=GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+GOENV=GOOS=linux GOARCH=amd64 CGO_ENABLED=0 GO111MODULE=on
 GOFLAGS=-gcflags="all=-trimpath=${GOPATH}" -asmflags="all=-trimpath=${GOPATH}"
 
 TESTTARGETS := $(shell go list -e ./... | egrep -v "/(vendor)/")
@@ -78,8 +78,8 @@ build-catalog-image:
 
 .PHONY: gocheck
 gocheck: ## Lint code
-	gofmt -s -l $(shell go list -f '{{ .Dir }}' ./... ) | grep ".*\.go"; if [ "$$?" = "0" ]; then gofmt -s -d $(shell go list -f '{{ .Dir }}' ./... ); exit 1; fi
-	go vet ./cmd/... ./pkg/...
+	${GOENV} gofmt -s -l $(shell go list -f '{{ .Dir }}' ./... ) | grep ".*\.go"; if [ "$$?" = "0" ]; then gofmt -s -d $(shell go list -f '{{ .Dir }}' ./... ); exit 1; fi
+	${GOENV} go vet ./cmd/... ./pkg/...
 
 .PHONY: gobuild
 gobuild: gocheck gotest ## Build binary
@@ -87,7 +87,7 @@ gobuild: gocheck gotest ## Build binary
 
 .PHONY: gotest
 gotest:
-	go test $(TESTOPTS) $(TESTTARGETS)
+	${GOENV} go test $(TESTOPTS) $(TESTTARGETS)
 
 .PHONY: envtest
 envtest:

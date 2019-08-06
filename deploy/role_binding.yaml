@@ -1,0 +1,11 @@
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: managed-velero-operator
+subjects:
+- kind: ServiceAccount
+  name: managed-velero-operator
+roleRef:
+  kind: Role
+  name: managed-velero-operator
+  apiGroup: rbac.authorization.k8s.io

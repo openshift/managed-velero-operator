@@ -26,6 +26,7 @@ OPERATOR_DOCKERFILE ?=build/Dockerfile
 
 BINFILE=build/_output/bin/$(OPERATOR_NAME)
 MAINPACKAGE=./cmd/manager
+export GO111MODULE=on
 GOENV=GOOS=linux GOARCH=amd64 CGO_ENABLED=0 GO111MODULE=on
 GOFLAGS=-gcflags="all=-trimpath=${GOPATH}" -asmflags="all=-trimpath=${GOPATH}"
 
@@ -78,8 +79,8 @@ build-catalog-image:
 
 .PHONY: gocheck
 gocheck: ## Lint code
-	${GOENV} gofmt -s -l $(shell go list -f '{{ .Dir }}' ./... ) | grep ".*\.go"; if [ "$$?" = "0" ]; then gofmt -s -d $(shell go list -f '{{ .Dir }}' ./... ); exit 1; fi
-	${GOENV} go vet ./cmd/... ./pkg/...
+	gofmt -s -l $(shell go list -f '{{ .Dir }}' ./... ) | grep ".*\.go"; if [ "$$?" = "0" ]; then gofmt -s -d $(shell go list -f '{{ .Dir }}' ./... ); exit 1; fi
+	go vet ./cmd/... ./pkg/...
 
 .PHONY: gobuild
 gobuild: gocheck gotest ## Build binary
@@ -87,7 +88,7 @@ gobuild: gocheck gotest ## Build binary
 
 .PHONY: gotest
 gotest:
-	${GOENV} go test $(TESTOPTS) $(TESTTARGETS)
+	go test $(TESTOPTS) $(TESTTARGETS)
 
 .PHONY: envtest
 envtest:

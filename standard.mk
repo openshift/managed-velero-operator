@@ -27,7 +27,7 @@ OPERATOR_DOCKERFILE ?=build/Dockerfile
 BINFILE=build/_output/bin/$(OPERATOR_NAME)
 MAINPACKAGE=./cmd/manager
 export GO111MODULE=on
-GOENV=GOOS=linux GOARCH=amd64 CGO_ENABLED=0 GO111MODULE=on
+GOENV=GOOS=linux GOARCH=amd64 CGO_ENABLED=0
 GOFLAGS=-gcflags="all=-trimpath=${GOPATH}" -asmflags="all=-trimpath=${GOPATH}"
 
 TESTTARGETS := $(shell go list -e ./... | egrep -v "/(vendor)/")
@@ -40,12 +40,7 @@ default: gobuild
 
 .PHONY: clean
 clean:
-	rm -rf ./build/_output bundles-staging bundles-production
-	docker rmi \
-		${OPERATOR_IMAGE_URI} \
-		${OPERATOR_IMAGE_URI_LATEST} \
-		quay.io/${CATALOG_REGISTRY_ORGANIZATION}/$(OPERATOR_NAME):staging-latest \
-		quay.io/${CATALOG_REGISTRY_ORGANIZATION}/$(OPERATOR_NAME):production-latest 2>/dev/null || true
+	rm -rf ./build/_output
 
 .PHONY: isclean
 isclean:
@@ -60,22 +55,6 @@ build: isclean envtest
 push:
 	docker push $(OPERATOR_IMAGE_URI)
 	docker push $(OPERATOR_IMAGE_URI_LATEST)
-
-.PHONY: skopeo-push
-skopeo-push: docker-build
-	skopeo copy \
-		--dest-creds "${QUAY_USER}:${QUAY_TOKEN}" \
-		"docker-daemon:${OPERATOR_IMAGE_URI_LATEST}" \
-		"docker://${OPERATOR_IMAGE_URI_LATEST}"
-	skopeo copy \
-		--dest-creds "${QUAY_USER}:${QUAY_TOKEN}" \
-		"docker-daemon:${OPERATOR_IMAGE_URI}" \
-		"docker://${OPERATOR_IMAGE_URI}"
-
-.PHONY: build-catalog-image
-build-catalog-image:
-	$(call create_push_catalog_image,staging,service/saas-managed--operator-bundle,$$APP_SRE_BOT_PUSH_TOKEN,false,service/saas-osd-operators,$(OPERATOR_NAME)-services/$(OPERATOR_NAME).yaml,build/generate-operator-bundle.py,$(CATALOG_REGISTRY_ORGANIZATION))
-	$(call create_push_catalog_image,production,service/saas-managed-velero-operator-bundle,$$APP_SRE_BOT_PUSH_TOKEN,true,service/saas-osd-operators,$(OPERATOR_NAME)-services/$(OPERATOR_NAME).yaml,build/generate-operator-bundle.py,$(CATALOG_REGISTRY_ORGANIZATION))
 
 .PHONY: gocheck
 gocheck: ## Lint code

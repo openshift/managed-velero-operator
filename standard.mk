@@ -30,7 +30,6 @@ export GO111MODULE=on
 GOENV=GOOS=linux GOARCH=amd64 CGO_ENABLED=0
 GOFLAGS=-gcflags="all=-trimpath=${GOPATH}" -asmflags="all=-trimpath=${GOPATH}"
 
-TESTTARGETS := $(shell go list -e ./... | egrep -v "/(vendor)/")
 # ex, -v
 TESTOPTS :=
 
@@ -44,7 +43,7 @@ clean:
 
 .PHONY: isclean
 isclean:
-	@(test "$(ALLOW_DIRTY_CHECKOUT)" != "false" || test 0 -eq $$(git status --porcelain | wc -l)) || (echo "Local git checkout is not clean, commit changes and try again." && exit 1)
+	@(test "$(ALLOW_DIRTY_CHECKOUT)" != "false" || test 0 -eq $$(git status --porcelain | wc -l)) || (echo "Local git checkout is not clean, commit changes and try again." >&2 && exit 1)
 
 .PHONY: build
 build: isclean envtest
@@ -67,12 +66,12 @@ gobuild: gocheck gotest ## Build binary
 
 .PHONY: gotest
 gotest:
-	go test $(TESTOPTS) $(TESTTARGETS)
+	go test $(TESTOPTS) $(shell go list -mod=readonly -e ./... | egrep -v "/(vendor)/")
 
 .PHONY: envtest
-envtest:
+envtest: isclean
 	@# test that the env target can be evaluated, required by osd-operators-registry
-	@eval $$($(MAKE) env --no-print-directory) || (echo 'Unable to evaulate output of `make env`.  This breaks osd-operators-registry.' && exit 1)
+	@eval $$($(MAKE) env --no-print-directory) || (echo 'Unable to evaulate output of `make env`.  This breaks osd-operators-registry.' >&2 && exit 1)
 
 .PHONY: test
 test: envtest gotest

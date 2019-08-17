@@ -1,6 +1,7 @@
 module github.com/openshift/managed-velero-operator
 
 require (
+	github.com/NYTimes/gziphandler v1.0.1 // indirect
 	github.com/openshift/api v3.9.1-0.20190806225813-d2972510af76+incompatible
 	github.com/operator-framework/operator-sdk v0.10.1-0.20190809191117-c1e2eae6580e
 	github.com/spf13/pflag v1.0.3

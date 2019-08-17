@@ -65,7 +65,7 @@ gobuild: ## Build binary
 
 .PHONY: gotest
 gotest:
-	go test $(TESTOPTS) $(shell go list -mod=readonly -e ./... | egrep -v "/(vendor)/")
+	go test $(TESTOPTS) $(shell GO111MODULE=$(GO111MODULE) go list -mod=readonly -e ./... | egrep -v "/(vendor)/")
 
 .PHONY: envtest
 envtest: isclean

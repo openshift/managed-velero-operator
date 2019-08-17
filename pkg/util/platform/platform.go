@@ -1,4 +1,4 @@
-package util
+package platform
 
 import (
 	"context"
@@ -6,7 +6,6 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 	corev1 "k8s.io/api/core/v1"
-	// metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
@@ -61,6 +60,8 @@ func GetPlatformStatus(client client.Client) (*configv1.PlatformStatus, error) {
 		return nil, fmt.Errorf("invalid install-config: %v\njson:\n%s", err, data)
 	}
 	return &configv1.PlatformStatus{
+		//lint:ignore SA1019 ignore deprecation, as this function is specifically
+		// designed for backwards compatibility
 		Type: infra.Status.Platform,
 		AWS: &configv1.AWSPlatformStatus{
 			Region: ic.Platform.AWS.Region,

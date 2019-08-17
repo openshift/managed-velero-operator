@@ -4,6 +4,7 @@ COPY . ${OPERATOR_PATH}
 WORKDIR ${OPERATOR_PATH}
 RUN make gobuild
 
+####
 FROM registry.access.redhat.com/ubi7/ubi-minimal:latest
 
 ENV OPERATOR_PATH=/go/src/github.com/openshift/managed-velero-operator \

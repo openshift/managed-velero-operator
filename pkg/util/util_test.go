@@ -7,7 +7,6 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	// "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/runtime"
 	client "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
@@ -94,6 +93,8 @@ func TestGetPlatformStatus(t *testing.T) {
 				},
 			}
 		} else {
+			//lint:ignore SA1019 ignore deprecation, as this function is specifically
+			// designed for backwards compatibility
 			infraObj.Status.Platform = configv1.PlatformType(tc.platform)
 		}
 		err = fc.Create(context.TODO(), &infraObj)

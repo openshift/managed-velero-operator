@@ -49,7 +49,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// Watch for changes to primary resource Velero
+	// Watch for changes to primary resource, Velero
 	err = c.Watch(&source.Kind{Type: &veleroCR.Velero{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err

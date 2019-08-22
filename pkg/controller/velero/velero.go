@@ -20,6 +20,7 @@ import (
 	apiextv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -28,6 +29,7 @@ const (
 	awsCredsSecretIDKey     = "aws_access_key_id"     // #nosec G101
 	awsCredsSecretAccessKey = "aws_secret_access_key" // #nosec G101
 	credentialsRequestName  = "velero-iam-credentials"
+	veleroImage             = "gcr.io/heptio-images/velero:v1.0.0"
 )
 
 func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace string, platformStatus *configv1.PlatformStatus, instance *veleroCR.Velero) (reconcile.Result, error) {
@@ -139,11 +141,7 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 
 	// Install Deployment
 	foundDeployment := &appsv1beta1.Deployment{}
-	deployment := veleroInstall.Deployment(namespace, veleroInstall.WithoutCredentialsVolume(),
-		veleroInstall.WithEnvFromSecretKey(strings.ToUpper(awsCredsSecretIDKey), credentialsRequestName, awsCredsSecretIDKey),
-		veleroInstall.WithEnvFromSecretKey(strings.ToUpper(awsCredsSecretAccessKey), credentialsRequestName, awsCredsSecretAccessKey),
-		veleroInstall.WithImage("gcr.io/heptio-images/velero:v1.0.0"),
-	)
+	deployment := veleroDeployment(namespace)
 	if err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: "velero"}, foundDeployment); err != nil {
 		if errors.IsNotFound(err) {
 			// Didn't find Deployment
@@ -230,4 +228,56 @@ func credentialsRequest(namespace, name, bucketName string) *minterv1.Credential
 			ProviderSpec: awsProvSpec,
 		},
 	}
+}
+
+func veleroDeployment(namespace string) *appsv1beta1.Deployment {
+	deployment := veleroInstall.Deployment(namespace, veleroInstall.WithoutCredentialsVolume(),
+		veleroInstall.WithEnvFromSecretKey(strings.ToUpper(awsCredsSecretIDKey), credentialsRequestName, awsCredsSecretIDKey),
+		veleroInstall.WithEnvFromSecretKey(strings.ToUpper(awsCredsSecretAccessKey), credentialsRequestName, awsCredsSecretAccessKey),
+		veleroInstall.WithImage(veleroImage),
+	)
+
+	replicas := int32(1)
+	terminationGracePeriodSeconds := int64(30)
+	revisionHistoryLimit := int32(2)
+	progressDeadlineSeconds := int32(600)
+	maxUnavailable := intstr.FromString("25%")
+	maxSurge := intstr.FromString("25%")
+	deployment.Spec.Replicas = &replicas
+	deployment.Spec.RevisionHistoryLimit = &revisionHistoryLimit
+	deployment.Spec.ProgressDeadlineSeconds = &progressDeadlineSeconds
+	deployment.Spec.Template.Spec.Containers[0].Ports[0].Protocol = "TCP"
+	deployment.Spec.Template.Spec.Containers[0].TerminationMessagePath = "/dev/termination-log"
+	deployment.Spec.Template.Spec.Containers[0].TerminationMessagePolicy = "File"
+	deployment.Spec.Template.Spec.DeprecatedServiceAccount = "velero"
+	deployment.Spec.Template.Spec.DNSPolicy = "ClusterFirst"
+	deployment.Spec.Template.Spec.SchedulerName = "default-scheduler"
+	deployment.Spec.Template.Spec.SecurityContext = &corev1.PodSecurityContext{}
+	deployment.Spec.Template.Spec.TerminationGracePeriodSeconds = &terminationGracePeriodSeconds
+	deployment.Spec.Strategy = appsv1beta1.DeploymentStrategy{
+		Type: appsv1beta1.RollingUpdateDeploymentStrategyType,
+		RollingUpdate: &appsv1beta1.RollingUpdateDeployment{
+			MaxUnavailable: &maxUnavailable,
+			MaxSurge:       &maxSurge,
+		},
+	}
+	deployment.Spec.Template.Spec.Affinity = &corev1.Affinity{
+		NodeAffinity: &corev1.NodeAffinity{
+			RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
+				NodeSelectorTerms: []corev1.NodeSelectorTerm{
+					{
+						MatchExpressions: []corev1.NodeSelectorRequirement{
+							{
+								Key:      "beta.kubernetes.io/arch",
+								Operator: corev1.NodeSelectorOpIn,
+								Values:   []string{"amd64"},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	return deployment
 }

@@ -2,13 +2,20 @@ module github.com/openshift/managed-velero-operator
 
 require (
 	github.com/NYTimes/gziphandler v1.0.1 // indirect
+	github.com/aws/aws-sdk-go v1.23.3
+	github.com/go-logr/logr v0.1.0
+	github.com/go-openapi/spec v0.19.0
+	github.com/google/uuid v1.1.1
+	github.com/heptio/velero v1.0.0
 	github.com/openshift/api v3.9.1-0.20190806225813-d2972510af76+incompatible
+	github.com/openshift/cloud-credential-operator v0.0.0-20190812222907-ec6f38d73a79
 	github.com/operator-framework/operator-sdk v0.10.1-0.20190809191117-c1e2eae6580e
 	github.com/spf13/pflag v1.0.3
 	k8s.io/api v0.0.0-20190612125737-db0771252981
+	k8s.io/apiextensions-apiserver v0.0.0-20190228180357-d002e88f6236
 	k8s.io/apimachinery v0.0.0-20190612125636-6a5db36e93ad
 	k8s.io/client-go v11.0.0+incompatible
-	k8s.io/kube-openapi v0.0.0-20190603182131-db7b694dc208 // indirect
+	k8s.io/kube-openapi v0.0.0-20190603182131-db7b694dc208
 	sigs.k8s.io/controller-runtime v0.1.12
 	sigs.k8s.io/controller-tools v0.1.10
 	sigs.k8s.io/yaml v1.1.0

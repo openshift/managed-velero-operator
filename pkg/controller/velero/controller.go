@@ -143,15 +143,8 @@ func (r *ReconcileVelero) Reconcile(request reconcile.Request) (reconcile.Result
 		return reconcile.Result{}, err
 	}
 
-	// If any of the following are true, reconcile the S3 bucket:
-	// - Name is empty
-	// - Provisioned is false
-	// - The LastSyncTimestamp is unset
-	// - It's been longer than 1 hour since last sync
-	if instance.Status.S3Bucket.Name == "" ||
-		!instance.Status.S3Bucket.Provisioned ||
-		instance.Status.S3Bucket.LastSyncTimestamp.IsZero() ||
-		time.Since(instance.Status.S3Bucket.LastSyncTimestamp.Time) > s3ReconcilePeriod {
+	// Check if bucket needs to be reconciled
+	if instance.S3BucketReconcileRequired(s3ReconcilePeriod) {
 		// Always directly return from this, as we will either update the
 		// timestamp when complete, or return an error.
 		return r.provisionS3(reqLogger, s3Client, instance)

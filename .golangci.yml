@@ -6,8 +6,8 @@ output:
   format: junit-xml
 linters:
   enable-all: true
-  disable:
-    - depguard
-    - gochecknoglobals
-    - gochecknoinits
-    - lll
+  # disable:
+  #   - depguard
+  #   - gochecknoglobals
+  #   - gochecknoinits
+  #   - lll

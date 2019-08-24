@@ -2,6 +2,8 @@ run:
   deadline: 30m
   concurrency: 1
   modules-download-mode: readonly
+output:
+  format: junit-xml
 linters:
   enable-all: true
   disable:

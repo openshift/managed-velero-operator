@@ -11,3 +11,5 @@ linters:
   #   - gochecknoglobals
   #   - gochecknoinits
   #   - lll
+maligned:
+  suggest-new: true

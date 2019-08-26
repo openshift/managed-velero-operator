@@ -1,4 +1,9 @@
 FROM registry.svc.ci.openshift.org/openshift/release:golang-1.12 AS builder
+
+# Allow specifying a GOPROXY cache during build to speed up dependency resolution
+ARG GOPROXY
+ENV GOPROXY=$GOPROXY
+
 ENV OPERATOR_PATH=/go/src/github.com/openshift/managed-velero-operator
 COPY . ${OPERATOR_PATH}
 WORKDIR ${OPERATOR_PATH}
@@ -23,4 +28,4 @@ ENTRYPOINT ["/usr/local/bin/entrypoint"]
 USER ${USER_UID}
 
 LABEL io.openshift.managed.name="managed-velero-operator" \
-      io.openshift.managed.description="Operator to manage installation of Velero in OpenShift Managed environments"
+      io.openshift.managed.description="Operator to manage installation of Velero in managed OpenShift environments"

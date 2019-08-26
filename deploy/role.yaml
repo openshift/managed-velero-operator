@@ -1,7 +1,9 @@
-kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
 metadata:
+  creationTimestamp: null
   name: managed-velero-operator
+  namespace: openshift-velero
 rules:
 - apiGroups:
   - ""
@@ -15,7 +17,7 @@ rules:
   - configmaps
   - secrets
   verbs:
-  - "*"
+  - '*'
 - apiGroups:
   - apps
   resources:
@@ -24,22 +26,22 @@ rules:
   - replicasets
   - statefulsets
   verbs:
-  - "*"
+  - '*'
 - apiGroups:
   - monitoring.coreos.com
   resources:
   - servicemonitors
   verbs:
-  - "get"
-  - "create"
+  - get
+  - create
 - apiGroups:
   - apps
-  resources:
-  - deployments/finalizers
   resourceNames:
   - managed-velero-operator
+  resources:
+  - deployments/finalizers
   verbs:
-  - "update"
+  - update
 - apiGroups:
   - ""
   resources:
@@ -52,3 +54,23 @@ rules:
   - replicasets
   verbs:
   - get
+- apiGroups:
+  - managed.openshift.io
+  resources:
+  - veleros
+  - veleros/status
+  - veleros/finalizers
+  verbs:
+  - '*'
+- apiGroups:
+  - velero.io
+  resources:
+  - '*'
+  verbs:
+  - '*'
+- apiGroups:
+  - cloudcredential.openshift.io
+  resources:
+  - credentialsrequests
+  verbs:
+  - '*'

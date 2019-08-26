@@ -68,3 +68,14 @@ func GetPlatformStatus(client client.Client) (*configv1.PlatformStatus, error) {
 		},
 	}, nil
 }
+
+// IsPlatformSupported checks if specified platform is in a slice of supported
+// platforms
+func IsPlatformSupported(platform configv1.PlatformType, supportedPlatforms []configv1.PlatformType) bool {
+	for _, p := range supportedPlatforms {
+		if p == platform {
+			return true
+		}
+	}
+	return false
+}

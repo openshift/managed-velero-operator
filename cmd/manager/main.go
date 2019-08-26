@@ -13,6 +13,8 @@ import (
 
 	"github.com/openshift/managed-velero-operator/pkg/apis"
 	"github.com/openshift/managed-velero-operator/pkg/controller"
+	"github.com/openshift/managed-velero-operator/pkg/util/platform"
+	"github.com/openshift/managed-velero-operator/version"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	kubemetrics "github.com/operator-framework/operator-sdk/pkg/kube-metrics"
@@ -24,10 +26,16 @@ import (
 	"github.com/spf13/pflag"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
+
+	velerov1 "github.com/heptio/velero/pkg/apis/velero/v1"
+	configv1 "github.com/openshift/api/config/v1"
+	minterv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
+	apiextv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 )
 
 // Change below variables to serve metrics on different host or port.
@@ -36,7 +44,13 @@ var (
 	metricsPort         int32 = 8383
 	operatorMetricsPort int32 = 8686
 )
-var log = logf.Log.WithName("cmd")
+
+var log = logf.Log.WithName(version.OperatorName)
+
+const ManagedVeleroOperatorNamespace = "openshift-velero"
+
+// supportedPlatforms is the list of platform supported by the operator
+var supportedPlatforms = []configv1.PlatformType{configv1.AWSPlatformType}
 
 func printVersion() {
 	log.Info(fmt.Sprintf("Go Version: %s", runtime.Version()))
@@ -67,9 +81,16 @@ func main() {
 
 	printVersion()
 
-	namespace, err := k8sutil.GetWatchNamespace()
+	namespace, err := k8sutil.GetOperatorNamespace()
 	if err != nil {
-		log.Error(err, "Failed to get watch namespace")
+		log.Error(err, "Failed to get operator namespace")
+		os.Exit(1)
+	}
+
+	// The operator makes assumptions about the namespace to configure Velero in.
+	// If the operator is deployed in a different namespace than expected, error.
+	if namespace != ManagedVeleroOperatorNamespace {
+		log.Error(fmt.Errorf("unexpected operator namespace: expected %s, got %s", ManagedVeleroOperatorNamespace, namespace), "")
 		os.Exit(1)
 	}
 
@@ -104,6 +125,49 @@ func main() {
 	// Setup Scheme for all resources
 	if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
 		log.Error(err, "")
+		os.Exit(1)
+	}
+
+	// Add Custom Resource apis to scheme
+	if err := apiextv1beta1.AddToScheme(mgr.GetScheme()); err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
+
+	// Add OpenShift config apis to scheme
+	if err := configv1.Install(mgr.GetScheme()); err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
+
+	// Add Cloud Credential apis to scheme
+	if err := minterv1.AddToScheme(mgr.GetScheme()); err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
+
+	// Add Velero apis to scheme
+	if err := velerov1.SchemeBuilder.AddToScheme(mgr.GetScheme()); err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
+
+	// Grab platform status to determine where OpenShift is installed
+	platformClient, err := crclient.New(cfg, crclient.Options{Scheme: mgr.GetScheme()})
+	if err != nil {
+		log.Error(err, "Unable to create platform client")
+		os.Exit(1)
+	}
+	platformStatus, err := platform.GetPlatformStatus(platformClient)
+	if err != nil {
+		log.Error(err, "Failed to retrieve platform status")
+		os.Exit(1)
+	}
+
+	// Verify platform is in support platforms list.
+	// TODO: expand support to other platforms
+	if !platform.IsPlatformSupported(platformStatus.Type, supportedPlatforms) {
+		log.Error(fmt.Errorf("expected %v got %v", supportedPlatforms, platformStatus.Type), "Unsupported platform")
 		os.Exit(1)
 	}
 

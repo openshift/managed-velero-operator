@@ -16,8 +16,7 @@ spec:
       serviceAccountName: managed-velero-operator
       containers:
         - name: managed-velero-operator
-          # Replace this with the built image name
-          image: REPLACE_IMAGE
+          image: quay.io/openshift-sre/managed-velero-operator
           command:
           - managed-velero-operator
           imagePullPolicy: Always

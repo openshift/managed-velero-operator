@@ -17,7 +17,6 @@ import (
 
 	"github.com/go-logr/logr"
 	configv1 "github.com/openshift/api/config/v1"
-	apiextv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -34,23 +33,6 @@ const (
 
 func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace string, platformStatus *configv1.PlatformStatus, instance *veleroCR.Velero) (reconcile.Result, error) {
 	var err error
-
-	// Install CRDs
-	for _, crd := range veleroInstall.CRDs() {
-		found := &apiextv1beta1.CustomResourceDefinition{}
-		if err = r.client.Get(context.TODO(), types.NamespacedName{Name: crd.ObjectMeta.Name}, found); err != nil {
-			if errors.IsNotFound(err) {
-				// Didn't find CRD, we should create it.
-				reqLogger.Info("Creating CRD", "CRD.Name", crd.ObjectMeta.Name)
-				if err = r.client.Create(context.TODO(), crd); err != nil {
-					return reconcile.Result{}, err
-				}
-			} else {
-				// Return other errors
-				return reconcile.Result{}, err
-			}
-		}
-	}
 
 	locationConfig := make(map[string]string)
 	locationConfig["region"] = platformStatus.AWS.Region

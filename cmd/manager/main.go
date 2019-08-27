@@ -14,6 +14,7 @@ import (
 	"github.com/openshift/managed-velero-operator/pkg/apis"
 	"github.com/openshift/managed-velero-operator/pkg/controller"
 	"github.com/openshift/managed-velero-operator/pkg/util/platform"
+	"github.com/openshift/managed-velero-operator/pkg/velero"
 	"github.com/openshift/managed-velero-operator/version"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
@@ -152,22 +153,30 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Grab platform status to determine where OpenShift is installed
-	platformClient, err := crclient.New(cfg, crclient.Options{Scheme: mgr.GetScheme()})
+	// Create k8s client to perform startup tasks
+	startupClient, err := crclient.New(cfg, crclient.Options{Scheme: mgr.GetScheme()})
 	if err != nil {
-		log.Error(err, "Unable to create platform client")
+		log.Error(err, "Unable to create operator startup client")
 		os.Exit(1)
 	}
-	platformStatus, err := platform.GetPlatformStatus(platformClient)
+
+	// Grab platform status to determine where OpenShift is installed
+	platformStatus, err := platform.GetPlatformStatus(startupClient)
 	if err != nil {
 		log.Error(err, "Failed to retrieve platform status")
 		os.Exit(1)
 	}
 
-	// Verify platform is in support platforms list.
+	// Verify platform is in support platforms list
 	// TODO: expand support to other platforms
 	if !platform.IsPlatformSupported(platformStatus.Type, supportedPlatforms) {
 		log.Error(fmt.Errorf("expected %v got %v", supportedPlatforms, platformStatus.Type), "Unsupported platform")
+		os.Exit(1)
+	}
+
+	// Verify all velero CRDs are installed
+	if err = velero.InstallVeleroCRDs(log, startupClient); err != nil {
+		log.Error(err, "Failed to install Velero CRDs")
 		os.Exit(1)
 	}
 

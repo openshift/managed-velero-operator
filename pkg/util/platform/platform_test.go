@@ -63,12 +63,10 @@ func TestGetPlatformStatus(t *testing.T) {
 		},
 	}
 	scheme := runtime.NewScheme()
-	err = configv1.Install(scheme)
-	if err != nil {
+	if err = configv1.Install(scheme); err != nil {
 		t.Fatalf("unable to create schema: %v", err)
 	}
-	err = corev1.AddToScheme(scheme)
-	if err != nil {
+	if err = corev1.AddToScheme(scheme); err != nil {
 		t.Fatalf("unable to create schema: %v", err)
 	}
 

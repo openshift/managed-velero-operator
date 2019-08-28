@@ -127,7 +127,11 @@ func (r *ReconcileVelero) Reconcile(request reconcile.Request) (reconcile.Result
 	}
 
 	// Grab platform status to determine where OpenShift is installed
-	platformStatus, err := platform.GetPlatformStatus(r.client)
+	platformStatusClient, err := platform.GetPlatformStatusClient()
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	platformStatus, err := platform.GetPlatformStatus(platformStatusClient)
 	if err != nil {
 		return reconcile.Result{}, err
 	}

@@ -6,6 +6,7 @@ import (
 
 	veleroCR "github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha1"
 	"github.com/openshift/managed-velero-operator/pkg/s3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -115,7 +116,9 @@ func (r *ReconcileVelero) provisionS3(reqLogger logr.Logger, s3Client *awss3.S3,
 	}
 
 	instance.Status.S3Bucket.Provisioned = true
-	instance.Status.S3Bucket.LastSyncTimestamp.Time = time.Now()
+	instance.Status.S3Bucket.LastSyncTimestamp = &metav1.Time{
+		Time: time.Now(),
+	}
 	return reconcile.Result{}, r.statusUpdate(reqLogger, instance)
 }
 

@@ -4,11 +4,15 @@ import (
 	"context"
 	"fmt"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
+
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/yaml"
+
 	configv1 "github.com/openshift/api/config/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/yaml"
 )
 
 type installConfig struct {
@@ -17,6 +21,32 @@ type installConfig struct {
 			Region string `json:"region"`
 		} `json:"aws"`
 	} `json:"platform"`
+}
+
+// GetPlatformStatusClient provides a k8s client that is capable of retrieving
+// the items necessary to determine the platform status.
+func GetPlatformStatusClient() (client.Client, error) {
+	var err error
+	scheme := runtime.NewScheme()
+
+	// Set up platform status client
+	cfg, err := config.GetConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	// Add OpenShift config apis to scheme
+	if err := configv1.Install(scheme); err != nil {
+		return nil, err
+	}
+
+	// Add Core apis to scheme
+	if err := corev1.AddToScheme(scheme); err != nil {
+		return nil, err
+	}
+
+	// Create client
+	return client.New(cfg, client.Options{Scheme: scheme})
 }
 
 // GetPlatformStatus provides a backwards-compatible way to look up platform

@@ -2,11 +2,16 @@ FROM registry.svc.ci.openshift.org/openshift/release:golang-1.12 AS builder
 
 # Allow specifying a GOPROXY cache during build to speed up dependency resolution
 ARG GOPROXY
-ENV GOPROXY=$GOPROXY
 
-ENV OPERATOR_PATH=/go/src/github.com/openshift/managed-velero-operator
-COPY . ${OPERATOR_PATH}
+ENV OPERATOR_PATH=/go/src/github.com/openshift/managed-velero-operator \
+    GO111MODULE=on \
+    GOPROXY=$GOPROXY
+
+RUN mkdir -p ${OPERATOR_PATH}
 WORKDIR ${OPERATOR_PATH}
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
 RUN make gobuild
 
 ####

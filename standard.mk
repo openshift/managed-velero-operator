@@ -27,6 +27,7 @@ OPERATOR_DOCKERFILE ?=build/Dockerfile
 BINFILE=build/_output/bin/$(OPERATOR_NAME)
 MAINPACKAGE=./cmd/manager
 export GO111MODULE=on
+export GOPROXY?=https://proxy.golang.org
 GOENV=GOOS=linux GOARCH=amd64 CGO_ENABLED=0
 GOFLAGS=-gcflags="all=-trimpath=${GOPATH}" -asmflags="all=-trimpath=${GOPATH}"
 
@@ -65,7 +66,7 @@ gobuild: ## Build binary
 
 .PHONY: gotest
 gotest:
-	go test $(TESTOPTS) $(shell GO111MODULE=$(GO111MODULE) go list -mod=readonly -e ./... | egrep -v "/(vendor)/")
+	go test $(TESTOPTS) $(shell GO111MODULE=$(GO111MODULE) GOPROXY=$(GOPROXY) go list -mod=readonly -e ./... | egrep -v "/(vendor)/")
 
 .PHONY: envtest
 envtest: isclean

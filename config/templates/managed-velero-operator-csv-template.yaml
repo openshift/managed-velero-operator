@@ -1,0 +1,50 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  name: managed-velero-operator-0.0.1
+  namespace: placeholder
+  annotations:
+    categories: A list of comma separated categories that your operator falls under.
+    certified: "false"
+    description: Operator to manage installation of Velero in OpenShift.
+    containerImage: quay.io/app-sre/managed-velero-operator:latest
+    createdAt: "2019-11-11T11:00:00Z"
+    support: Stefanie Forrester
+spec:
+  displayName: Managed Velero Operator
+  description: Operator to manage installation of Velero in OpenShift.
+  keywords:
+  - kubernetes
+  - backup
+  - openshift
+  - velero
+  - storage
+  version: 0.0.1
+  provider:
+    name: Red Hat, Inc
+  maturity: alpha
+  installModes:
+  - type: OwnNamespace
+    supported: true
+  - type: SingleNamespace
+    supported: true
+  - type: MultiNamespace
+    supported: false
+  - type: AllNamespaces
+    supported: false
+  install:
+    strategy: deployment
+    spec:
+      clusterPermissions:
+      - serviceAccountName: managed-velero-operator
+        # Rules will be added here by the generate-csv.py script.
+      deployments:
+      - name: managed-velero-operator
+        # Deployment spec will be added here by the generate-csv.py script.
+  customresourcedefinitions:
+    owned:
+    - description: Represents an instance of Velero and its dependencies.
+      displayName: Velero
+      kind: Velero
+      name: veleros.managed.openshift.io
+      version: v1alpha1

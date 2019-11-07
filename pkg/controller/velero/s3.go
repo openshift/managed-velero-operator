@@ -67,7 +67,10 @@ func (r *ReconcileVelero) provisionS3(reqLogger logr.Logger, s3Client *awss3.S3,
 				return reconcile.Result{}, fmt.Errorf("error occurred when creating bucket %v: %v", instance.Status.S3Bucket.Name, err.Error())
 			}
 		}
-
+		err = s3.TagBucket(s3Client, instance.Status.S3Bucket.Name, defaultBackupStorageLocation)
+		if err != nil {
+			return reconcile.Result{}, fmt.Errorf("error occurred when tagging bucket %v: %v", instance.Status.S3Bucket.Name, err.Error())
+		}
 	}
 
 	// Verify S3 bucket exists
@@ -113,6 +116,13 @@ func (r *ReconcileVelero) provisionS3(reqLogger logr.Logger, s3Client *awss3.S3,
 			return reconcile.Result{}, fmt.Errorf("error occurred when configuring lifecycle rules on bucket %v: %v", instance.Status.S3Bucket.Name, aerr.Error())
 		}
 		return reconcile.Result{}, fmt.Errorf("error occurred when configuring lifecycle rules on bucket %v: %v", instance.Status.S3Bucket.Name, err.Error())
+	}
+
+	// Make sure that tags are applied to buckets
+	bucketLog.Info("Enforcing S3 Bucket tags on S3 Bucket")
+	err = s3.TagBucket(s3Client, instance.Status.S3Bucket.Name, defaultBackupStorageLocation)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("error occurred when tagging bucket %v: %v", instance.Status.S3Bucket.Name, err.Error())
 	}
 
 	instance.Status.S3Bucket.Provisioned = true

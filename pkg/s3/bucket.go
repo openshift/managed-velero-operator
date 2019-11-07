@@ -8,6 +8,10 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 )
 
+const (
+	bucketTagKey = "velero.io/backup-location"
+)
+
 func CreateBucket(s3Client *s3.S3, bucketName string) error {
 	createBucketInput := &s3.CreateBucketInput{
 		ACL:    aws.String(s3.BucketCannedACLPrivate),
@@ -123,4 +127,39 @@ func SetBucketLifecycle(s3Client *s3.S3, bucketName string) error {
 	_, err := s3Client.PutBucketLifecycleConfiguration(bucketLifecycleConfigurationInput)
 
 	return err
+}
+func CreateBucketTaggingInput(bucketname string, backUpLocation string) *s3.PutBucketTaggingInput {
+	putInput := &s3.PutBucketTaggingInput{
+		Bucket: aws.String(bucketname),
+		Tagging: &s3.Tagging{
+			TagSet: []*s3.Tag{
+				{
+					Key:   aws.String(bucketTagKey),
+					Value: aws.String(backUpLocation),
+				},
+			},
+		},
+	}
+	return putInput
+}
+
+func ClearBucketTags(s3Client *s3.S3, bucketName string) (err error) {
+	deleteInput := &s3.DeleteBucketTaggingInput{Bucket: aws.String(bucketName)}
+	result, err := s3Client.DeleteBucketTagging(deleteInput)
+	fmt.Println(result)
+	return err
+}
+
+func TagBucket(s3Client *s3.S3, bucketName string, backUpLocation string) error {
+	err := ClearBucketTags(s3Client, bucketName)
+	if err != nil {
+		return fmt.Errorf("unable to clear %v bucket tags: %v", bucketName, err)
+	}
+	input := CreateBucketTaggingInput(bucketName, backUpLocation)
+	_, err = s3Client.PutBucketTagging(input)
+	if err != nil {
+		fmt.Println(err.Error())
+		return err
+	}
+	return nil
 }

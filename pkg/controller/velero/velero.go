@@ -29,7 +29,7 @@ const (
 	awsCredsSecretAccessKey      = "aws_secret_access_key" // #nosec G101
 	credentialsRequestName       = "velero-iam-credentials"
 	veleroImage                  = "gcr.io/heptio-images/velero:v1.0.0"
-	deafultBackupStorageLocation = "default"
+	defaultBackupStorageLocation = "default"
 )
 
 func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace string, platformStatus *configv1.PlatformStatus, instance *veleroCR.Velero) (reconcile.Result, error) {
@@ -41,7 +41,7 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 	// Install BackupStorageLocation
 	foundBsl := &velerov1.BackupStorageLocation{}
 	bsl := veleroInstall.BackupStorageLocation(namespace, strings.ToLower(string(platformStatus.Type)), instance.Status.S3Bucket.Name, "", locationConfig)
-	if err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: deafultBackupStorageLocation}, foundBsl); err != nil {
+	if err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: defaultBackupStorageLocation}, foundBsl); err != nil {
 		if errors.IsNotFound(err) {
 			// Didn't find BackupStorageLocation
 			reqLogger.Info("Creating BackupStorageLocation")

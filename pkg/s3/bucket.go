@@ -128,25 +128,28 @@ func SetBucketLifecycle(s3Client *s3.S3, bucketName string) error {
 
 	return err
 }
-func CreateBucketTaggingInput(bucketname string, backUpLocation string) *s3.PutBucketTaggingInput {
+
+func CreateBucketTaggingInput(bucketname string, tags map[string]string) *s3.PutBucketTaggingInput {
 	putInput := &s3.PutBucketTaggingInput{
 		Bucket: aws.String(bucketname),
 		Tagging: &s3.Tagging{
-			TagSet: []*s3.Tag{
-				{
-					Key:   aws.String(bucketTagKey),
-					Value: aws.String(backUpLocation),
-				},
-			},
+			TagSet: []*s3.Tag{},
 		},
+	}
+	for key, value := range tags {
+		newTag := s3.Tag{
+			Key:   aws.String(key),
+			Value: aws.String(value),
+		}
+		putInput.Tagging.TagSet = append(putInput.Tagging.TagSet, &newTag)
 	}
 	return putInput
 }
 
 func ClearBucketTags(s3Client *s3.S3, bucketName string) (err error) {
 	deleteInput := &s3.DeleteBucketTaggingInput{Bucket: aws.String(bucketName)}
-	result, err := s3Client.DeleteBucketTagging(deleteInput)
-	fmt.Println(result)
+	_, err = s3Client.DeleteBucketTagging(deleteInput)
+	fmt.Println("did it fucking delete?!")
 	return err
 }
 
@@ -155,7 +158,7 @@ func TagBucket(s3Client *s3.S3, bucketName string, backUpLocation string) error 
 	if err != nil {
 		return fmt.Errorf("unable to clear %v bucket tags: %v", bucketName, err)
 	}
-	input := CreateBucketTaggingInput(bucketName, backUpLocation)
+	input := CreateBucketTaggingInput(bucketName, map[string]string{bucketTagKey: backUpLocation})
 	_, err = s3Client.PutBucketTagging(input)
 	if err != nil {
 		fmt.Println(err.Error())

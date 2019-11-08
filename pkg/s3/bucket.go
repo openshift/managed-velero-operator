@@ -149,7 +149,6 @@ func CreateBucketTaggingInput(bucketname string, tags map[string]string) *s3.Put
 func ClearBucketTags(s3Client *s3.S3, bucketName string) (err error) {
 	deleteInput := &s3.DeleteBucketTaggingInput{Bucket: aws.String(bucketName)}
 	_, err = s3Client.DeleteBucketTagging(deleteInput)
-	fmt.Println("did it fucking delete?!")
 	return err
 }
 

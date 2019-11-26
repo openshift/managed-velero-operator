@@ -29,9 +29,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	crclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/signals"
+	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 
 	velerov1 "github.com/heptio/velero/pkg/apis/velero/v1"
 	configv1 "github.com/openshift/api/config/v1"
@@ -54,6 +54,7 @@ const ManagedVeleroOperatorNamespace = "openshift-velero"
 var supportedPlatforms = []configv1.PlatformType{configv1.AWSPlatformType}
 
 func printVersion() {
+	log.Info(fmt.Sprintf("Operator Version: %s", version.Version))
 	log.Info(fmt.Sprintf("Go Version: %s", runtime.Version()))
 	log.Info(fmt.Sprintf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH))
 	log.Info(fmt.Sprintf("Version of operator-sdk: %v", sdkVersion.Version))

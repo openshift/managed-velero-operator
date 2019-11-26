@@ -35,6 +35,7 @@ type S3Bucket struct {
 // Velero is the Schema for the veleros API
 // +k8s:openapi-gen=true
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:path=veleros,scope=Namespaced
 // +kubebuilder:printcolumn:name="Bucket",type="string",JSONPath=".status.s3Bucket.name",description="Name of the S3 bucket"
 // +kubebuilder:printcolumn:name="Provisioned",type="boolean",JSONPath=".status.s3Bucket.provisioned",description="Has the S3 bucket been successfully provisioned"
 // +kubebuilder:printcolumn:name="Last Sync",type="date",JSONPath=".status.s3Bucket.lastSyncTimestamp"

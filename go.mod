@@ -7,7 +7,7 @@ require (
 	github.com/go-logr/logr v0.1.0
 	github.com/go-openapi/spec v0.19.0
 	github.com/google/uuid v1.1.1
-	github.com/heptio/velero v1.0.0
+	github.com/heptio/velero v1.1.0
 	github.com/openshift/api v3.9.1-0.20190927182313-d4a64ec2cbd8+incompatible
 	github.com/openshift/cloud-credential-operator v0.0.0-20191009163822-b905f49fd022
 	sigs.k8s.io/yaml v1.1.0

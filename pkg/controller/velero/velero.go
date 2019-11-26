@@ -11,7 +11,7 @@ import (
 	velerov1 "github.com/heptio/velero/pkg/apis/velero/v1"
 	veleroInstall "github.com/heptio/velero/pkg/install"
 	minterv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
-	appsv1beta1 "k8s.io/api/apps/v1beta1"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -28,7 +28,7 @@ const (
 	awsCredsSecretIDKey          = "aws_access_key_id"     // #nosec G101
 	awsCredsSecretAccessKey      = "aws_secret_access_key" // #nosec G101
 	credentialsRequestName       = "velero-iam-credentials"
-	veleroImage                  = "gcr.io/heptio-images/velero:v1.0.0"
+	veleroImage                  = "gcr.io/heptio-images/velero:v1.1.0"
 	defaultBackupStorageLocation = "default"
 )
 
@@ -123,7 +123,7 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 	}
 
 	// Install Deployment
-	foundDeployment := &appsv1beta1.Deployment{}
+	foundDeployment := &appsv1.Deployment{}
 	deployment := veleroDeployment(namespace)
 	if err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: "velero"}, foundDeployment); err != nil {
 		if errors.IsNotFound(err) {
@@ -142,7 +142,7 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 		// Deployment exists, check if it's updated.
 		if !reflect.DeepEqual(foundDeployment.Spec, deployment.Spec) {
 			// Specs aren't equal, update and fix.
-			reqLogger.Info("Updating Deployment")
+			reqLogger.Info("Updating Deployment", "foundDeployment.Spec", foundDeployment.Spec, "deployment.Spec", deployment.Spec)
 			foundDeployment.Spec = *deployment.Spec.DeepCopy()
 			if err = r.client.Update(context.TODO(), foundDeployment); err != nil {
 				return reconcile.Result{}, err
@@ -213,8 +213,8 @@ func credentialsRequest(namespace, name, bucketName string) *minterv1.Credential
 	}
 }
 
-func veleroDeployment(namespace string) *appsv1beta1.Deployment {
-	deployment := veleroInstall.Deployment(namespace, veleroInstall.WithoutCredentialsVolume(),
+func veleroDeployment(namespace string) *appsv1.Deployment {
+	deployment := veleroInstall.Deployment(namespace,
 		veleroInstall.WithEnvFromSecretKey(strings.ToUpper(awsCredsSecretIDKey), credentialsRequestName, awsCredsSecretIDKey),
 		veleroInstall.WithEnvFromSecretKey(strings.ToUpper(awsCredsSecretAccessKey), credentialsRequestName, awsCredsSecretAccessKey),
 		veleroInstall.WithImage(veleroImage),
@@ -229,6 +229,7 @@ func veleroDeployment(namespace string) *appsv1beta1.Deployment {
 	deployment.Spec.Replicas = &replicas
 	deployment.Spec.RevisionHistoryLimit = &revisionHistoryLimit
 	deployment.Spec.ProgressDeadlineSeconds = &progressDeadlineSeconds
+	deployment.Spec.Template.Spec.Containers[0].Env[1].ValueFrom.FieldRef.APIVersion = "v1"
 	deployment.Spec.Template.Spec.Containers[0].Ports[0].Protocol = "TCP"
 	deployment.Spec.Template.Spec.Containers[0].TerminationMessagePath = "/dev/termination-log"
 	deployment.Spec.Template.Spec.Containers[0].TerminationMessagePolicy = "File"
@@ -237,9 +238,9 @@ func veleroDeployment(namespace string) *appsv1beta1.Deployment {
 	deployment.Spec.Template.Spec.SchedulerName = "default-scheduler"
 	deployment.Spec.Template.Spec.SecurityContext = &corev1.PodSecurityContext{}
 	deployment.Spec.Template.Spec.TerminationGracePeriodSeconds = &terminationGracePeriodSeconds
-	deployment.Spec.Strategy = appsv1beta1.DeploymentStrategy{
-		Type: appsv1beta1.RollingUpdateDeploymentStrategyType,
-		RollingUpdate: &appsv1beta1.RollingUpdateDeployment{
+	deployment.Spec.Strategy = appsv1.DeploymentStrategy{
+		Type: appsv1.RollingUpdateDeploymentStrategyType,
+		RollingUpdate: &appsv1.RollingUpdateDeployment{
 			MaxUnavailable: &maxUnavailable,
 			MaxSurge:       &maxSurge,
 		},

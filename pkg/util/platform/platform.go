@@ -90,8 +90,8 @@ func GetPlatformStatus(client client.Client) (*configv1.PlatformStatus, error) {
 		return nil, fmt.Errorf("invalid install-config: %v\njson:\n%s", err, data)
 	}
 	return &configv1.PlatformStatus{
-		//lint:ignore SA1019 ignore deprecation, as this function is specifically
-		// designed for backwards compatibility
+		//lint:ignore SA1019 ignore deprecation, as this function is specifically designed for backwards compatibility
+		//nolint:staticcheck // ref https://github.com/golangci/golangci-lint/issues/741
 		Type: infra.Status.Platform,
 		AWS: &configv1.AWSPlatformStatus{
 			Region: ic.Platform.AWS.Region,

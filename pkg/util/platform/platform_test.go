@@ -91,8 +91,8 @@ func TestGetPlatformStatus(t *testing.T) {
 				},
 			}
 		} else {
-			//lint:ignore SA1019 ignore deprecation, as this function is specifically
-			// designed for backwards compatibility
+			//lint:ignore SA1019 ignore deprecation, as this function is specifically designed for backwards compatibility
+			//nolint:staticcheck // ref https://github.com/golangci/golangci-lint/issues/741
 			infraObj.Status.Platform = configv1.PlatformType(tc.platform)
 		}
 		err = fc.Create(context.TODO(), &infraObj)

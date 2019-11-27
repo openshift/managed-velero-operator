@@ -23,6 +23,7 @@ func schema_pkg_apis_managed_v1alpha1_S3Bucket(ref common.ReferenceCallback) com
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "S3Bucket defines the observed state of Velero",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"name": {
 						SchemaProps: spec.SchemaProps{
@@ -58,6 +59,7 @@ func schema_pkg_apis_managed_v1alpha1_Velero(ref common.ReferenceCallback) commo
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "Velero is the Schema for the veleros API",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"kind": {
 						SchemaProps: spec.SchemaProps{
@@ -101,10 +103,9 @@ func schema_pkg_apis_managed_v1alpha1_VeleroSpec(ref common.ReferenceCallback) c
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "VeleroSpec defines the desired state of Velero",
-				Properties:  map[string]spec.Schema{},
+				Type:        []string{"object"},
 			},
 		},
-		Dependencies: []string{},
 	}
 }
 
@@ -113,6 +114,7 @@ func schema_pkg_apis_managed_v1alpha1_VeleroStatus(ref common.ReferenceCallback)
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "VeleroStatus defines the observed state of Velero",
+				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
 					"s3Bucket": {
 						SchemaProps: spec.SchemaProps{

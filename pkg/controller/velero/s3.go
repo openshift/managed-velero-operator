@@ -26,7 +26,6 @@ func (r *ReconcileVelero) provisionS3(reqLogger logr.Logger, s3Client *awss3.S3,
 
 	// This switch handles the provisioning steps/checks
 	switch {
-
 	// We don't yet have a bucket name selected
 	case instance.Status.S3Bucket.Name == "":
 		log.Info("No S3 bucket defined")

@@ -60,7 +60,7 @@ func (in *Velero) DeepCopyObject() runtime.Object {
 func (in *VeleroList) DeepCopyInto(out *VeleroList) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
-	out.ListMeta = in.ListMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
 	if in.Items != nil {
 		in, out := &in.Items, &out.Items
 		*out = make([]Velero, len(*in))

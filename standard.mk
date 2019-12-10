@@ -29,7 +29,7 @@ MAINPACKAGE=./cmd/manager
 export GO111MODULE=on
 export GOPROXY?=https://proxy.golang.org
 GOENV=GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-GOFLAGS=-gcflags="all=-trimpath=${GOPATH}" -asmflags="all=-trimpath=${GOPATH}"
+GOFLAGS=-gcflags="all=-trimpath=${GOPATH}" -asmflags="all=-trimpath=${GOPATH}" -mod=''
 
 # ex, -v
 TESTOPTS :=

@@ -27,9 +27,10 @@ OPERATOR_DOCKERFILE ?=build/Dockerfile
 BINFILE=build/_output/bin/$(OPERATOR_NAME)
 MAINPACKAGE=./cmd/manager
 export GO111MODULE=on
+unexport GOFLAGS
 export GOPROXY?=https://proxy.golang.org
 GOENV=GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-GOFLAGS=-gcflags="all=-trimpath=${GOPATH}" -asmflags="all=-trimpath=${GOPATH}" -mod=''
+GOBUILDFLAGS=-gcflags="all=-trimpath=${GOPATH}" -asmflags="all=-trimpath=${GOPATH}"
 
 # ex, -v
 TESTOPTS :=
@@ -62,7 +63,7 @@ verify: ## Lint code
 
 .PHONY: gobuild
 gobuild: ## Build binary
-	${GOENV} go build ${GOFLAGS} -o ${BINFILE} ${MAINPACKAGE}
+	${GOENV} go build ${GOBUILDFLAGS} -o ${BINFILE} ${MAINPACKAGE}
 
 .PHONY: gotest
 gotest:

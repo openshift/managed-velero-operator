@@ -161,8 +161,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Grab platform status to determine where OpenShift is installed
-	platformStatus, err := platform.GetPlatformStatus(startupClient)
+	// Get infrastructureStatus (which contains the platformStatus).
+	infraStatus, err := platform.GetInfrastructureStatus(startupClient)
+	if err != nil {
+		log.Error(err, "Failed to retrieve infrastructure status")
+		os.Exit(1)
+	}
+	platformStatus, err := platform.GetPlatformStatus(startupClient, infraStatus)
 	if err != nil {
 		log.Error(err, "Failed to retrieve platform status")
 		os.Exit(1)

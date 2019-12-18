@@ -20,7 +20,7 @@ const (
 	bucketPrefix = "managed-velero-backups-"
 )
 
-func (r *ReconcileVelero) provisionS3(reqLogger logr.Logger, s3Client *awss3.S3, instance *veleroCR.Velero) (reconcile.Result, error) {
+func (r *ReconcileVelero) provisionS3(reqLogger logr.Logger, s3Client *awss3.S3, instance *veleroCR.Velero, infraName string) (reconcile.Result, error) {
 	var err error
 	bucketLog := reqLogger.WithValues("S3Bucket.Name", instance.Status.S3Bucket.Name, "S3Bucket.Region", s3Client.Client.Config.Region)
 
@@ -28,7 +28,21 @@ func (r *ReconcileVelero) provisionS3(reqLogger logr.Logger, s3Client *awss3.S3,
 	switch {
 	// We don't yet have a bucket name selected
 	case instance.Status.S3Bucket.Name == "":
-		log.Info("No S3 bucket defined")
+
+		// Use an existing bucket, if it exists.
+		log.Info("No S3 bucket defined. Searching for existing bucket to use")
+		existingBucket, err := s3.FindExistingBucket(s3Client, infraName)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+		if existingBucket != "" {
+			log.Info(fmt.Sprintf("Recovered existing bucket: %s", existingBucket))
+			instance.Status.S3Bucket.Name = existingBucket
+			instance.Status.S3Bucket.Provisioned = true
+			return reconcile.Result{}, r.statusUpdate(reqLogger, instance)
+		}
+
+		// Prepare to create a new bucket, if none exist.
 		proposedName := generateBucketName(bucketPrefix)
 		proposedBucketExists, err := s3.DoesBucketExist(s3Client, proposedName)
 		if err != nil {
@@ -66,7 +80,7 @@ func (r *ReconcileVelero) provisionS3(reqLogger logr.Logger, s3Client *awss3.S3,
 				return reconcile.Result{}, fmt.Errorf("error occurred when creating bucket %v: %v", instance.Status.S3Bucket.Name, err.Error())
 			}
 		}
-		err = s3.TagBucket(s3Client, instance.Status.S3Bucket.Name, defaultBackupStorageLocation)
+		err = s3.TagBucket(s3Client, instance.Status.S3Bucket.Name, defaultBackupStorageLocation, infraName)
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("error occurred when tagging bucket %v: %v", instance.Status.S3Bucket.Name, err.Error())
 		}
@@ -119,7 +133,7 @@ func (r *ReconcileVelero) provisionS3(reqLogger logr.Logger, s3Client *awss3.S3,
 
 	// Make sure that tags are applied to buckets
 	bucketLog.Info("Enforcing S3 Bucket tags on S3 Bucket")
-	err = s3.TagBucket(s3Client, instance.Status.S3Bucket.Name, defaultBackupStorageLocation)
+	err = s3.TagBucket(s3Client, instance.Status.S3Bucket.Name, defaultBackupStorageLocation, infraName)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("error occurred when tagging bucket %v: %v", instance.Status.S3Bucket.Name, err.Error())
 	}

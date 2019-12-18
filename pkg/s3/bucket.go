@@ -9,9 +9,11 @@ import (
 )
 
 const (
-	bucketTagKey = "velero.io/backup-location"
+	bucketTagBackupLocation = "velero.io/backup-location"
+	bucketTagInfraName      = "velero.io/infrastructureName"
 )
 
+// CreateBucket creates a new S3 bucket.
 func CreateBucket(s3Client *s3.S3, bucketName string) error {
 	createBucketInput := &s3.CreateBucketInput{
 		ACL:    aws.String(s3.BucketCannedACLPrivate),
@@ -34,6 +36,7 @@ func CreateBucket(s3Client *s3.S3, bucketName string) error {
 	return err
 }
 
+// DoesBucketExist checks that the bucket exists, and that we have access to it.
 func DoesBucketExist(s3Client *s3.S3, bucketName string) (bool, error) {
 	input := &s3.HeadBucketInput{
 		Bucket: aws.String(bucketName),
@@ -58,6 +61,7 @@ func DoesBucketExist(s3Client *s3.S3, bucketName string) (bool, error) {
 	return true, nil
 }
 
+// EncryptBucket sets the encryption configuration for the bucket.
 func EncryptBucket(s3Client *s3.S3, bucketName string) error {
 	bucketEncryptionInput := &s3.PutBucketEncryptionInput{
 		Bucket: aws.String(bucketName),
@@ -81,6 +85,7 @@ func EncryptBucket(s3Client *s3.S3, bucketName string) error {
 	return err
 }
 
+// BlockBucketPublicAccess blocks public access to the bucket's contents.
 func BlockBucketPublicAccess(s3Client *s3.S3, bucketName string) error {
 	publicAccessBlockInput := &s3.PutPublicAccessBlockInput{
 		Bucket: aws.String(bucketName),
@@ -101,6 +106,7 @@ func BlockBucketPublicAccess(s3Client *s3.S3, bucketName string) error {
 	return err
 }
 
+// SetBucketLifecycle sets a lifecycle on the specified bucket.
 func SetBucketLifecycle(s3Client *s3.S3, bucketName string) error {
 	bucketLifecycleConfigurationInput := &s3.PutBucketLifecycleConfigurationInput{
 		Bucket: aws.String(bucketName),
@@ -146,22 +152,71 @@ func CreateBucketTaggingInput(bucketname string, tags map[string]string) *s3.Put
 	return putInput
 }
 
+// ClearBucketTags wipes all existing tags from a bucket so that velero-specific
+// tags can be applied to the bucket instead.
 func ClearBucketTags(s3Client *s3.S3, bucketName string) (err error) {
 	deleteInput := &s3.DeleteBucketTaggingInput{Bucket: aws.String(bucketName)}
 	_, err = s3Client.DeleteBucketTagging(deleteInput)
 	return err
 }
 
-func TagBucket(s3Client *s3.S3, bucketName string, backUpLocation string) error {
+// TagBucket adds tags to an S3 bucket. The tags are used to indicate that velero backups
+// are stored in the bucket, and to identify the associated cluster.
+func TagBucket(s3Client *s3.S3, bucketName string, backUpLocation string, infraName string) error {
 	err := ClearBucketTags(s3Client, bucketName)
 	if err != nil {
 		return fmt.Errorf("unable to clear %v bucket tags: %v", bucketName, err)
 	}
-	input := CreateBucketTaggingInput(bucketName, map[string]string{bucketTagKey: backUpLocation})
+	input := CreateBucketTaggingInput(bucketName, map[string]string{
+		bucketTagBackupLocation: backUpLocation,
+		bucketTagInfraName:      infraName,
+	})
 	_, err = s3Client.PutBucketTagging(input)
 	if err != nil {
 		fmt.Println(err.Error())
 		return err
 	}
 	return nil
+}
+
+// FindExistingBucket looks for an S3 bucket matching this cluster's velero tags
+// and infrastructure tags. If a matching bucket is found, the bucket name is returned.
+func FindExistingBucket(s3Client *s3.S3, infraName string) (string, error) {
+	// List all buckets associated with this cluster's AWS account.
+	input := &s3.ListBucketsInput{}
+	result, err := s3Client.ListBuckets(input)
+	if err != nil {
+		fmt.Println(err.Error())
+		return "", err
+	}
+
+	for _, bucket := range result.Buckets {
+		request := &s3.GetBucketTaggingInput{
+			Bucket: aws.String(*bucket.Name),
+		}
+		response, err := s3Client.GetBucketTagging(request)
+		if ec2err, ok := err.(awserr.Error); ok && ec2err.Code() == "NoSuchTagSet" {
+			// If there is no tag set, exit this function without error.
+			return "", nil
+		} else if err != nil {
+			return "", err
+		}
+
+		var tagMatchesCluster, tagMatchesVelero bool
+		for _, tag := range response.TagSet {
+			if *tag.Key == bucketTagInfraName && *tag.Value == infraName {
+				tagMatchesCluster = true
+			}
+			if *tag.Key == bucketTagBackupLocation {
+				tagMatchesVelero = true
+			}
+		}
+
+		if tagMatchesCluster && tagMatchesVelero {
+			return *bucket.Name, nil
+		}
+	}
+
+	// No matching buckets found.
+	return "", nil
 }

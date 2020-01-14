@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/openshift/managed-velero-operator/version"
-
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -30,7 +30,6 @@ func NewS3Client(kubeClient client.Client, region string) (*s3.S3, error) {
 	var err error
 
 	awsConfig := &aws.Config{Region: aws.String(region)}
-
 	namespace, err := k8sutil.GetOperatorNamespace()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get operator namespace: %v", err)

@@ -49,11 +49,8 @@ func GetPlatformStatusClient() (client.Client, error) {
 	return client.New(cfg, client.Options{Scheme: scheme})
 }
 
-// GetPlatformStatus provides a backwards-compatible way to look up platform
-// status. AWS is the special case. 4.1 clusters on AWS expose the region config
-// only through install-config. New AWS clusters and all other 4.2+ platforms
-// are configured via platform status.
-func GetPlatformStatus(client client.Client) (*configv1.PlatformStatus, error) {
+// GetInfrastructureStatus fetches the InfrastructureStatus for the cluster.
+func GetInfrastructureStatus(client client.Client) (*configv1.InfrastructureStatus, error) {
 	var err error
 
 	// Retrieve the cluster infrastructure config.
@@ -63,7 +60,16 @@ func GetPlatformStatus(client client.Client) (*configv1.PlatformStatus, error) {
 		return nil, err
 	}
 
-	if status := infra.Status.PlatformStatus; status != nil {
+	return &infra.Status, nil
+}
+
+// GetPlatformStatus provides a backwards-compatible way to look up platform
+// status. AWS is the special case. 4.1 clusters on AWS expose the region config
+// only through install-config. New AWS clusters and all other 4.2+ platforms
+// are configured via platform status.
+func GetPlatformStatus(client client.Client, infraStatus *configv1.InfrastructureStatus) (*configv1.PlatformStatus, error) {
+
+	if status := infraStatus.PlatformStatus; status != nil {
 		// Only AWS needs backwards compatibility with install-config
 		if status.Type != configv1.AWSPlatformType {
 			return status, nil
@@ -92,7 +98,7 @@ func GetPlatformStatus(client client.Client) (*configv1.PlatformStatus, error) {
 	return &configv1.PlatformStatus{
 		//lint:ignore SA1019 ignore deprecation, as this function is specifically designed for backwards compatibility
 		//nolint:staticcheck // ref https://github.com/golangci/golangci-lint/issues/741
-		Type: infra.Status.Platform,
+		Type: infraStatus.Platform,
 		AWS: &configv1.AWSPlatformStatus{
 			Region: ic.Platform.AWS.Region,
 		},

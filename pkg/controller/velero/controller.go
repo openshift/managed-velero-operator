@@ -126,15 +126,22 @@ func (r *ReconcileVelero) Reconcile(request reconcile.Request) (reconcile.Result
 		return reconcile.Result{}, err
 	}
 
-	// Grab platform status to determine where OpenShift is installed
+	// Grab platformStatus to determine where OpenShift is installed.
 	platformStatusClient, err := platform.GetPlatformStatusClient()
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	platformStatus, err := platform.GetPlatformStatus(platformStatusClient)
+	infraStatus, err := platform.GetInfrastructureStatus(platformStatusClient)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
+	platformStatus, err := platform.GetPlatformStatus(platformStatusClient, infraStatus)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// Grab the unique identifier for this cluster's infrastructure.
+	infraName := infraStatus.InfrastructureName
 
 	// Verify that we have received an AWS region from the platform
 	if platformStatus.AWS == nil || len(platformStatus.AWS.Region) < 1 {
@@ -151,7 +158,7 @@ func (r *ReconcileVelero) Reconcile(request reconcile.Request) (reconcile.Result
 	if instance.S3BucketReconcileRequired(s3ReconcilePeriod) {
 		// Always directly return from this, as we will either update the
 		// timestamp when complete, or return an error.
-		return r.provisionS3(reqLogger, s3Client, instance)
+		return r.provisionS3(reqLogger, s3Client, instance, infraName)
 	}
 
 	// Now go provision Velero

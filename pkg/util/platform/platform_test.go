@@ -117,8 +117,13 @@ func TestGetPlatformStatus(t *testing.T) {
 			t.Fatalf("unable to create fake configmap object: %v", err)
 		}
 
+		infraStatus, err := GetInfrastructureStatus(fc)
+		if err != nil {
+			t.Fatalf("unable to get fake infrastructureStatus object: %v", err)
+		}
+
 		// Run test and compare
-		ps, err := GetPlatformStatus(fc)
+		ps, err := GetPlatformStatus(fc, infraStatus)
 		if err != nil {
 			t.Errorf("error on retrieving platform status: %v", err)
 		}

@@ -179,44 +179,60 @@ func TagBucket(s3Client *s3.S3, bucketName string, backUpLocation string, infraN
 	return nil
 }
 
-// FindExistingBucket looks for an S3 bucket matching this cluster's velero tags
-// and infrastructure tags. If a matching bucket is found, the bucket name is returned.
-func FindExistingBucket(s3Client *s3.S3, infraName string) (string, error) {
-	// List all buckets associated with this cluster's AWS account.
+// ListBuckets lists all buckets in the AWS account.
+func ListBuckets(s3Client *s3.S3) (*s3.ListBucketsOutput, error) {
 	input := &s3.ListBucketsInput{}
 	result, err := s3Client.ListBuckets(input)
 	if err != nil {
 		fmt.Println(err.Error())
-		return "", err
+		return result, err
 	}
+	return result, nil
+}
 
-	for _, bucket := range result.Buckets {
+// ListBucketTags returns a list of s3.GetBucketTagging objects, one for each bucket.
+func ListBucketTags(s3Client *s3.S3, bucketlist *s3.ListBucketsOutput) (map[string]*s3.GetBucketTaggingOutput, error) {
+	taglist := make(map[string]*s3.GetBucketTaggingOutput)
+	for _, bucket := range bucketlist.Buckets {
 		request := &s3.GetBucketTaggingInput{
 			Bucket: aws.String(*bucket.Name),
 		}
 		response, err := s3Client.GetBucketTagging(request)
 		if ec2err, ok := err.(awserr.Error); ok && ec2err.Code() == "NoSuchTagSet" {
 			// If there is no tag set, exit this function without error.
-			return "", nil
+			return taglist, nil
 		} else if err != nil {
-			return "", err
+			return taglist, err
 		}
+		taglist[*bucket.Name] = response
+	}
+	return taglist, nil
+}
 
-		var tagMatchesCluster, tagMatchesVelero bool
-		for _, tag := range response.TagSet {
+// FindMatchingTags looks through the TagSets for all AWS buckets and determines if
+// any of the buckets are tagged for velero updates for the cluster.
+// If matching tags are found, the bucket name is returned.
+func FindMatchingTags(buckets map[string]*s3.GetBucketTaggingOutput, infraName string) string {
+	var tagMatchesCluster, tagMatchesVelero bool
+	var possiblematch string
+	for bucket, tags := range buckets {
+		for _, tag := range tags.TagSet {
 			if *tag.Key == bucketTagInfraName && *tag.Value == infraName {
 				tagMatchesCluster = true
+				possiblematch = bucket
 			}
 			if *tag.Key == bucketTagBackupLocation {
 				tagMatchesVelero = true
+				possiblematch = bucket
 			}
-		}
-
-		if tagMatchesCluster && tagMatchesVelero {
-			return *bucket.Name, nil
 		}
 	}
 
+	// If these two conditions are true, the match is confirmed.
+	if tagMatchesCluster && tagMatchesVelero {
+		return possiblematch
+	}
+
 	// No matching buckets found.
-	return "", nil
+	return ""
 }

@@ -26,6 +26,8 @@ var (
 	awsCredsSecretName = version.OperatorName + "-iam-credentials"
 )
 
+// NewS3Client reads the aws secrets in the operator's namespace and uses
+// them to create a new client for accessing the S3 API.
 func NewS3Client(kubeClient client.Client, region string) (*s3.S3, error) {
 	var err error
 

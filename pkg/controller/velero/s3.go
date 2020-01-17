@@ -20,9 +20,10 @@ const (
 	bucketPrefix = "managed-velero-backups-"
 )
 
-func (r *ReconcileVelero) provisionS3(reqLogger logr.Logger, s3Client *awss3.S3, instance *veleroCR.Velero, infraName string) (reconcile.Result, error) {
+func (r *ReconcileVelero) provisionS3(reqLogger logr.Logger, s3Client s3.Client, instance *veleroCR.Velero, infraName string) (reconcile.Result, error) {
 	var err error
-	bucketLog := reqLogger.WithValues("S3Bucket.Name", instance.Status.S3Bucket.Name, "S3Bucket.Region", s3Client.Client.Config.Region)
+	config := s3Client.GetAWSClientConfig()
+	bucketLog := reqLogger.WithValues("S3Bucket.Name", instance.Status.S3Bucket.Name, "S3Bucket.Region", *config.Region)
 
 	// This switch handles the provisioning steps/checks
 	switch {

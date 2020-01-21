@@ -1,6 +1,7 @@
 package s3
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -11,8 +12,9 @@ import (
 )
 
 const (
-	clusterInfraName = "fakeCluster"
-	region           = "us-east-1"
+	clusterInfraName             = "fakeCluster"
+	region                       = "us-east-1"
+	defaultBackupStorageLocation = "default"
 )
 
 var awsConfig = &aws.Config{Region: aws.String(region)}
@@ -54,12 +56,28 @@ func (c *mockAWSClient) HeadBucket(input *s3.HeadBucketInput) (*s3.HeadBucketOut
 	if *input.Bucket == "testBucket" {
 		return &s3.HeadBucketOutput{}, nil
 	}
-	return &s3.HeadBucketOutput{}, awserr.New("403", s3.ErrCodeNoSuchBucket, nil)
+	return &s3.HeadBucketOutput{}, awserr.New("NotFound", "Not Found", nil)
 }
 
 // GetBucketTagging implements the GetBucketTagging method for mockAWSClient.
 func (c *mockAWSClient) GetBucketTagging(input *s3.GetBucketTaggingInput) (*s3.GetBucketTaggingOutput, error) {
-	return c.s3Client.GetBucketTagging(input)
+	if *input.Bucket == "testBucket" {
+		return &s3.GetBucketTaggingOutput{
+			TagSet: []*s3.Tag{
+				{
+					Key:   aws.String(bucketTagBackupLocation),
+					Value: aws.String(defaultBackupStorageLocation),
+				},
+				{
+					Key:   aws.String(bucketTagInfraName),
+					Value: aws.String(clusterInfraName),
+				},
+			},
+		}, nil
+	}
+	return &s3.GetBucketTaggingOutput{
+		TagSet: []*s3.Tag{},
+	}, nil
 }
 
 // GetPublicAccessBlock implements the GetPublicAccessBlock method for mockAWSClient.
@@ -166,7 +184,7 @@ func TestFindMatchingTags(t *testing.T) {
 					TagSet: []*s3.Tag{
 						{
 							Key:   aws.String(bucketTagBackupLocation),
-							Value: aws.String("default"),
+							Value: aws.String(defaultBackupStorageLocation),
 						},
 						{
 							Key:   aws.String(bucketTagInfraName),
@@ -246,13 +264,13 @@ func TestDoesBucketExist(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "Ensure that bucket named 'potato' does not exist",
+			name: "Ensure that bucket named 'nonExistentBucket' does not exist",
 			args: args{
 				s3Client:   &fakeClient,
-				bucketName: "potato",
+				bucketName: "nonExistentBucket",
 			},
 			want:    false,
-			wantErr: true,
+			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
@@ -264,6 +282,79 @@ func TestDoesBucketExist(t *testing.T) {
 			}
 			if got != tt.want {
 				t.Errorf("DoesBucketExist() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestListBucketTags(t *testing.T) {
+	type args struct {
+		s3Client   Client
+		bucketlist *s3.ListBucketsOutput
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    map[string]*s3.GetBucketTaggingOutput
+		wantErr bool
+	}{
+		{
+			name: "Ensure that bucket named 'testBucket' has expected tags",
+			args: args{
+				s3Client: &fakeClient,
+				bucketlist: &s3.ListBucketsOutput{
+					Buckets: []*s3.Bucket{
+						{
+							Name: aws.String("testBucket"),
+						},
+					},
+				},
+			},
+			want: map[string]*s3.GetBucketTaggingOutput{
+				"testBucket": &s3.GetBucketTaggingOutput{
+					TagSet: []*s3.Tag{
+						{
+							Key:   aws.String(bucketTagBackupLocation),
+							Value: aws.String(defaultBackupStorageLocation),
+						},
+						{
+							Key:   aws.String(bucketTagInfraName),
+							Value: aws.String(clusterInfraName),
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Ensure that bucket named 'nonExistentBucket' returns empty TagSet",
+			args: args{
+				s3Client: &fakeClient,
+				bucketlist: &s3.ListBucketsOutput{
+					Buckets: []*s3.Bucket{
+						{
+							Name: aws.String("nonExistentBucket"),
+						},
+					},
+				},
+			},
+			want: map[string]*s3.GetBucketTaggingOutput{
+				"nonExistentBucket": &s3.GetBucketTaggingOutput{
+					TagSet: []*s3.Tag{},
+				},
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ListBucketTags(tt.args.s3Client, tt.args.bucketlist)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ListBucketTags() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ListBucketTags() = %v, want %v", got, tt.want)
 			}
 		})
 	}

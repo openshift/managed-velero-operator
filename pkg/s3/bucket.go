@@ -195,20 +195,33 @@ func ListBuckets(s3Client Client) (*s3.ListBucketsOutput, error) {
 }
 
 // ListBucketTags returns a list of s3.GetBucketTagging objects, one for each bucket.
+// If the bucket is not readable, or has no tags, an empty TagSet is returned for that bucket.
 func ListBucketTags(s3Client Client, bucketlist *s3.ListBucketsOutput) (map[string]*s3.GetBucketTaggingOutput, error) {
 	taglist := make(map[string]*s3.GetBucketTaggingOutput)
+	emptyTagSet := &s3.GetBucketTaggingOutput{
+		TagSet: []*s3.Tag{},
+	}
 	for _, bucket := range bucketlist.Buckets {
-		request := &s3.GetBucketTaggingInput{
-			Bucket: aws.String(*bucket.Name),
-		}
-		response, err := s3Client.GetBucketTagging(request)
-		if ec2err, ok := err.(awserr.Error); ok && ec2err.Code() == "NoSuchTagSet" {
-			// If there is no tag set, exit this function without error.
-			return taglist, nil
-		} else if err != nil {
+		taglist[*bucket.Name] = emptyTagSet
+		// Sometimes deleted buckets will show up in this list.
+		// In case they are in the process of being deleted, exit gracefully.
+		bucketReadable, err := DoesBucketExist(s3Client, *bucket.Name)
+		if err != nil {
 			return taglist, err
 		}
-		taglist[*bucket.Name] = response
+		if bucketReadable {
+			request := &s3.GetBucketTaggingInput{
+				Bucket: aws.String(*bucket.Name),
+			}
+			response, err := s3Client.GetBucketTagging(request)
+			if ec2err, ok := err.(awserr.Error); ok && ec2err.Code() == "NoSuchTagSet" {
+				// If there is no tag set, exit this function without error.
+				return taglist, nil
+			} else if err != nil {
+				return taglist, err
+			}
+			taglist[*bucket.Name] = response
+		}
 	}
 	return taglist, nil
 }

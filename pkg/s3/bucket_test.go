@@ -338,11 +338,7 @@ func TestListBucketTags(t *testing.T) {
 					},
 				},
 			},
-			want: map[string]*s3.GetBucketTaggingOutput{
-				"nonExistentBucket": &s3.GetBucketTaggingOutput{
-					TagSet: []*s3.Tag{},
-				},
-			},
+			want:    map[string]*s3.GetBucketTaggingOutput{},
 			wantErr: false,
 		},
 	}

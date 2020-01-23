@@ -195,14 +195,11 @@ func ListBuckets(s3Client Client) (*s3.ListBucketsOutput, error) {
 }
 
 // ListBucketTags returns a list of s3.GetBucketTagging objects, one for each bucket.
-// If the bucket is not readable, or has no tags, an empty TagSet is returned for that bucket.
+// If the bucket is not readable, or has no tags, the bucket name is omitted from the taglist.
+// So taglist only contains the list of buckets that have tags.
 func ListBucketTags(s3Client Client, bucketlist *s3.ListBucketsOutput) (map[string]*s3.GetBucketTaggingOutput, error) {
 	taglist := make(map[string]*s3.GetBucketTaggingOutput)
-	emptyTagSet := &s3.GetBucketTaggingOutput{
-		TagSet: []*s3.Tag{},
-	}
 	for _, bucket := range bucketlist.Buckets {
-		taglist[*bucket.Name] = emptyTagSet
 		// Sometimes deleted buckets will show up in this list.
 		// In case they are in the process of being deleted, exit gracefully.
 		bucketReadable, err := DoesBucketExist(s3Client, *bucket.Name)

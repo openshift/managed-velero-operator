@@ -14,16 +14,18 @@ const (
 )
 
 // CreateBucket creates a new S3 bucket.
-func CreateBucket(s3Client *s3.S3, bucketName string) error {
+func CreateBucket(s3Client Client, bucketName string) error {
 	createBucketInput := &s3.CreateBucketInput{
 		ACL:    aws.String(s3.BucketCannedACLPrivate),
 		Bucket: aws.String(bucketName),
 	}
 	// Only set a location constraint if the cluster isn't in us-east-1
 	// https://github.com/boto/boto3/issues/125
-	if *s3Client.Client.Config.Region != "us-east-1" {
+	config := s3Client.GetAWSClientConfig()
+
+	if *config.Region != "us-east-1" {
 		createBucketConfiguation := &s3.CreateBucketConfiguration{
-			LocationConstraint: s3Client.Client.Config.Region,
+			LocationConstraint: config.Region,
 		}
 		createBucketInput.SetCreateBucketConfiguration(createBucketConfiguation)
 	}
@@ -37,7 +39,7 @@ func CreateBucket(s3Client *s3.S3, bucketName string) error {
 }
 
 // DoesBucketExist checks that the bucket exists, and that we have access to it.
-func DoesBucketExist(s3Client *s3.S3, bucketName string) (bool, error) {
+func DoesBucketExist(s3Client Client, bucketName string) (bool, error) {
 	input := &s3.HeadBucketInput{
 		Bucket: aws.String(bucketName),
 	}
@@ -62,7 +64,7 @@ func DoesBucketExist(s3Client *s3.S3, bucketName string) (bool, error) {
 }
 
 // EncryptBucket sets the encryption configuration for the bucket.
-func EncryptBucket(s3Client *s3.S3, bucketName string) error {
+func EncryptBucket(s3Client Client, bucketName string) error {
 	bucketEncryptionInput := &s3.PutBucketEncryptionInput{
 		Bucket: aws.String(bucketName),
 		ServerSideEncryptionConfiguration: &s3.ServerSideEncryptionConfiguration{
@@ -86,7 +88,7 @@ func EncryptBucket(s3Client *s3.S3, bucketName string) error {
 }
 
 // BlockBucketPublicAccess blocks public access to the bucket's contents.
-func BlockBucketPublicAccess(s3Client *s3.S3, bucketName string) error {
+func BlockBucketPublicAccess(s3Client Client, bucketName string) error {
 	publicAccessBlockInput := &s3.PutPublicAccessBlockInput{
 		Bucket: aws.String(bucketName),
 		PublicAccessBlockConfiguration: &s3.PublicAccessBlockConfiguration{
@@ -107,7 +109,7 @@ func BlockBucketPublicAccess(s3Client *s3.S3, bucketName string) error {
 }
 
 // SetBucketLifecycle sets a lifecycle on the specified bucket.
-func SetBucketLifecycle(s3Client *s3.S3, bucketName string) error {
+func SetBucketLifecycle(s3Client Client, bucketName string) error {
 	bucketLifecycleConfigurationInput := &s3.PutBucketLifecycleConfigurationInput{
 		Bucket: aws.String(bucketName),
 		LifecycleConfiguration: &s3.BucketLifecycleConfiguration{
@@ -135,6 +137,8 @@ func SetBucketLifecycle(s3Client *s3.S3, bucketName string) error {
 	return err
 }
 
+// CreateBucketTaggingInput creates an S3 PutBucketTaggingInput object,
+// which is used to associate a list of tags with a bucket.
 func CreateBucketTaggingInput(bucketname string, tags map[string]string) *s3.PutBucketTaggingInput {
 	putInput := &s3.PutBucketTaggingInput{
 		Bucket: aws.String(bucketname),
@@ -154,7 +158,7 @@ func CreateBucketTaggingInput(bucketname string, tags map[string]string) *s3.Put
 
 // ClearBucketTags wipes all existing tags from a bucket so that velero-specific
 // tags can be applied to the bucket instead.
-func ClearBucketTags(s3Client *s3.S3, bucketName string) (err error) {
+func ClearBucketTags(s3Client Client, bucketName string) (err error) {
 	deleteInput := &s3.DeleteBucketTaggingInput{Bucket: aws.String(bucketName)}
 	_, err = s3Client.DeleteBucketTagging(deleteInput)
 	return err
@@ -162,7 +166,7 @@ func ClearBucketTags(s3Client *s3.S3, bucketName string) (err error) {
 
 // TagBucket adds tags to an S3 bucket. The tags are used to indicate that velero backups
 // are stored in the bucket, and to identify the associated cluster.
-func TagBucket(s3Client *s3.S3, bucketName string, backUpLocation string, infraName string) error {
+func TagBucket(s3Client Client, bucketName string, backUpLocation string, infraName string) error {
 	err := ClearBucketTags(s3Client, bucketName)
 	if err != nil {
 		return fmt.Errorf("unable to clear %v bucket tags: %v", bucketName, err)
@@ -179,44 +183,70 @@ func TagBucket(s3Client *s3.S3, bucketName string, backUpLocation string, infraN
 	return nil
 }
 
-// FindExistingBucket looks for an S3 bucket matching this cluster's velero tags
-// and infrastructure tags. If a matching bucket is found, the bucket name is returned.
-func FindExistingBucket(s3Client *s3.S3, infraName string) (string, error) {
-	// List all buckets associated with this cluster's AWS account.
+// ListBuckets lists all buckets in the AWS account.
+func ListBuckets(s3Client Client) (*s3.ListBucketsOutput, error) {
 	input := &s3.ListBucketsInput{}
 	result, err := s3Client.ListBuckets(input)
 	if err != nil {
 		fmt.Println(err.Error())
-		return "", err
+		return result, err
 	}
+	return result, nil
+}
 
-	for _, bucket := range result.Buckets {
-		request := &s3.GetBucketTaggingInput{
-			Bucket: aws.String(*bucket.Name),
+// ListBucketTags returns a list of s3.GetBucketTagging objects, one for each bucket.
+// If the bucket is not readable, or has no tags, the bucket name is omitted from the taglist.
+// So taglist only contains the list of buckets that have tags.
+func ListBucketTags(s3Client Client, bucketlist *s3.ListBucketsOutput) (map[string]*s3.GetBucketTaggingOutput, error) {
+	taglist := make(map[string]*s3.GetBucketTaggingOutput)
+	for _, bucket := range bucketlist.Buckets {
+		// Sometimes deleted buckets will show up in this list.
+		// In case they are in the process of being deleted, exit gracefully.
+		bucketReadable, err := DoesBucketExist(s3Client, *bucket.Name)
+		if err != nil {
+			return taglist, err
 		}
-		response, err := s3Client.GetBucketTagging(request)
-		if ec2err, ok := err.(awserr.Error); ok && ec2err.Code() == "NoSuchTagSet" {
-			// If there is no tag set, exit this function without error.
-			return "", nil
-		} else if err != nil {
-			return "", err
+		if bucketReadable {
+			request := &s3.GetBucketTaggingInput{
+				Bucket: aws.String(*bucket.Name),
+			}
+			response, err := s3Client.GetBucketTagging(request)
+			if ec2err, ok := err.(awserr.Error); ok && ec2err.Code() == "NoSuchTagSet" {
+				// If there is no tag set, exit this function without error.
+				return taglist, nil
+			} else if err != nil {
+				return taglist, err
+			}
+			taglist[*bucket.Name] = response
 		}
+	}
+	return taglist, nil
+}
 
-		var tagMatchesCluster, tagMatchesVelero bool
-		for _, tag := range response.TagSet {
+// FindMatchingTags looks through the TagSets for all AWS buckets and determines if
+// any of the buckets are tagged for velero updates for the cluster.
+// If matching tags are found, the bucket name is returned.
+func FindMatchingTags(buckets map[string]*s3.GetBucketTaggingOutput, infraName string) string {
+	var tagMatchesCluster, tagMatchesVelero bool
+	var possiblematch string
+	for bucket, tags := range buckets {
+		for _, tag := range tags.TagSet {
 			if *tag.Key == bucketTagInfraName && *tag.Value == infraName {
 				tagMatchesCluster = true
+				possiblematch = bucket
 			}
 			if *tag.Key == bucketTagBackupLocation {
 				tagMatchesVelero = true
+				possiblematch = bucket
 			}
-		}
-
-		if tagMatchesCluster && tagMatchesVelero {
-			return *bucket.Name, nil
 		}
 	}
 
+	// If these two conditions are true, the match is confirmed.
+	if tagMatchesCluster && tagMatchesVelero {
+		return possiblematch
+	}
+
 	// No matching buckets found.
-	return "", nil
+	return ""
 }

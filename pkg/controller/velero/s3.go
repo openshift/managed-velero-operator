@@ -20,9 +20,10 @@ const (
 	bucketPrefix = "managed-velero-backups-"
 )
 
-func (r *ReconcileVelero) provisionS3(reqLogger logr.Logger, s3Client *awss3.S3, instance *veleroCR.Velero, infraName string) (reconcile.Result, error) {
+func (r *ReconcileVelero) provisionS3(reqLogger logr.Logger, s3Client s3.Client, instance *veleroCR.Velero, infraName string) (reconcile.Result, error) {
 	var err error
-	bucketLog := reqLogger.WithValues("S3Bucket.Name", instance.Status.S3Bucket.Name, "S3Bucket.Region", s3Client.Client.Config.Region)
+	config := s3Client.GetAWSClientConfig()
+	bucketLog := reqLogger.WithValues("S3Bucket.Name", instance.Status.S3Bucket.Name, "S3Bucket.Region", *config.Region)
 
 	// This switch handles the provisioning steps/checks
 	switch {
@@ -31,10 +32,17 @@ func (r *ReconcileVelero) provisionS3(reqLogger logr.Logger, s3Client *awss3.S3,
 
 		// Use an existing bucket, if it exists.
 		log.Info("No S3 bucket defined. Searching for existing bucket to use")
-		existingBucket, err := s3.FindExistingBucket(s3Client, infraName)
+		bucketlist, err := s3.ListBuckets(s3Client)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
+
+		bucketinfo, err := s3.ListBucketTags(s3Client, bucketlist)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+
+		existingBucket := s3.FindMatchingTags(bucketinfo, infraName)
 		if existingBucket != "" {
 			log.Info(fmt.Sprintf("Recovered existing bucket: %s", existingBucket))
 			instance.Status.S3Bucket.Name = existingBucket

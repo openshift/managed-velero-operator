@@ -311,7 +311,7 @@ func TestListBucketTags(t *testing.T) {
 				},
 			},
 			want: map[string]*s3.GetBucketTaggingOutput{
-				"testBucket": &s3.GetBucketTaggingOutput{
+				"testBucket": {
 					TagSet: []*s3.Tag{
 						{
 							Key:   aws.String(bucketTagBackupLocation),
@@ -327,18 +327,22 @@ func TestListBucketTags(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "Ensure that bucket named 'nonExistentBucket' returns empty TagSet",
+			name: "Ensure that bucket named 'nonTaggedBucket' returns empty TagSet",
 			args: args{
 				s3Client: &fakeClient,
 				bucketlist: &s3.ListBucketsOutput{
 					Buckets: []*s3.Bucket{
 						{
-							Name: aws.String("nonExistentBucket"),
+							Name: aws.String("nonTaggedBucket"),
 						},
 					},
 				},
 			},
-			want:    map[string]*s3.GetBucketTaggingOutput{},
+			want: map[string]*s3.GetBucketTaggingOutput{
+				"nonTaggedBucket": {
+					TagSet: []*s3.Tag{},
+				},
+			},
 			wantErr: false,
 		},
 	}

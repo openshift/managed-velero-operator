@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// InstallVeleroCRDs ensures that operator dependencies are installed at runtime.
 func InstallVeleroCRDs(log logr.Logger, client client.Client) error {
 	var err error
 

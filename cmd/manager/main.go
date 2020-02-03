@@ -167,11 +167,7 @@ func main() {
 		log.Error(err, "Failed to retrieve infrastructure status")
 		os.Exit(1)
 	}
-	platformStatus, err := platform.GetPlatformStatus(startupClient, infraStatus)
-	if err != nil {
-		log.Error(err, "Failed to retrieve platform status")
-		os.Exit(1)
-	}
+	platformStatus := infraStatus.PlatformStatus
 
 	// Verify platform is in support platforms list
 	// TODO: expand support to other platforms

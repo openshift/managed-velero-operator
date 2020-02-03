@@ -135,10 +135,7 @@ func (r *ReconcileVelero) Reconcile(request reconcile.Request) (reconcile.Result
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	platformStatus, err := platform.GetPlatformStatus(platformStatusClient, infraStatus)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
+	platformStatus := infraStatus.PlatformStatus
 
 	// Grab the unique identifier for this cluster's infrastructure.
 	infraName := infraStatus.InfrastructureName

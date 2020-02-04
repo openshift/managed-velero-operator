@@ -13,9 +13,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// GetPlatformStatusClient provides a k8s client that is capable of retrieving
+// GetInfrastructureClient provides a k8s client that is capable of retrieving
 // the items necessary to determine the platform status.
-func GetPlatformStatusClient() (client.Client, error) {
+func GetInfrastructureClient() (client.Client, error) {
 	var err error
 	scheme := runtime.NewScheme()
 

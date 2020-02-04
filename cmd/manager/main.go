@@ -161,18 +161,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Get infrastructureStatus (which contains the platformStatus).
+	// Get infrastructureStatus so we can discover the platform we are running on
 	infraStatus, err := platform.GetInfrastructureStatus(startupClient)
 	if err != nil {
 		log.Error(err, "Failed to retrieve infrastructure status")
 		os.Exit(1)
 	}
-	platformStatus := infraStatus.PlatformStatus
 
 	// Verify platform is in support platforms list
 	// TODO: expand support to other platforms
-	if !platform.IsPlatformSupported(platformStatus.Type, supportedPlatforms) {
-		log.Error(fmt.Errorf("expected %v got %v", supportedPlatforms, platformStatus.Type), "Unsupported platform")
+	if !platform.IsPlatformSupported(infraStatus.PlatformStatus.Type, supportedPlatforms) {
+		log.Error(fmt.Errorf("expected %v got %v", supportedPlatforms, infraStatus.PlatformStatus.Type), "Unsupported platform")
 		os.Exit(1)
 	}
 

@@ -126,27 +126,23 @@ func (r *ReconcileVelero) Reconcile(request reconcile.Request) (reconcile.Result
 		return reconcile.Result{}, err
 	}
 
-	// Grab platformStatus to determine where OpenShift is installed.
-	platformStatusClient, err := platform.GetPlatformStatusClient()
+	// Grab infrastructureStatus to determine where OpenShift is installed.
+	infrastructureStatusClient, err := platform.GetInfrastructureClient()
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	infraStatus, err := platform.GetInfrastructureStatus(platformStatusClient)
+	infraStatus, err := platform.GetInfrastructureStatus(infrastructureStatusClient)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	platformStatus := infraStatus.PlatformStatus
-
-	// Grab the unique identifier for this cluster's infrastructure.
-	infraName := infraStatus.InfrastructureName
 
 	// Verify that we have received an AWS region from the platform
-	if platformStatus.AWS == nil || len(platformStatus.AWS.Region) < 1 {
+	if infraStatus.PlatformStatus.AWS == nil || len(infraStatus.PlatformStatus.AWS.Region) < 1 {
 		return reconcile.Result{}, fmt.Errorf("unable to determine AWS region")
 	}
 
 	// Create an S3 client based on the region we received
-	s3Client, err := s3.NewS3Client(r.client, platformStatus.AWS.Region)
+	s3Client, err := s3.NewS3Client(r.client, infraStatus.PlatformStatus.AWS.Region)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -155,11 +151,11 @@ func (r *ReconcileVelero) Reconcile(request reconcile.Request) (reconcile.Result
 	if instance.S3BucketReconcileRequired(s3ReconcilePeriod) {
 		// Always directly return from this, as we will either update the
 		// timestamp when complete, or return an error.
-		return r.provisionS3(reqLogger, s3Client, instance, infraName)
+		return r.provisionS3(reqLogger, s3Client, instance, infraStatus.InfrastructureName)
 	}
 
 	// Now go provision Velero
-	return r.provisionVelero(reqLogger, request.Namespace, platformStatus, instance)
+	return r.provisionVelero(reqLogger, request.Namespace, infraStatus.PlatformStatus, instance)
 }
 
 func (r *ReconcileVelero) statusUpdate(reqLogger logr.Logger, instance *veleroCR.Velero) error {

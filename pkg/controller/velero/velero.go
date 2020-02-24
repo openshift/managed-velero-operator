@@ -28,7 +28,6 @@ const (
 	awsCredsSecretIDKey          = "aws_access_key_id"     // #nosec G101
 	awsCredsSecretAccessKey      = "aws_secret_access_key" // #nosec G101
 	credentialsRequestName       = "velero-iam-credentials"
-	veleroImage                  = "gcr.io/heptio-images/velero:v1.1.0"
 	defaultBackupStorageLocation = "default"
 )
 
@@ -37,6 +36,14 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 
 	locationConfig := make(map[string]string)
 	locationConfig["region"] = platformStatus.AWS.Region
+
+	// Use chinese mirror for the upstream image in AWS china regions
+	var veleroImage string
+	if locationConfig["region"] == "cn-north-1" || locationConfig["region"] == "cn-northwest-1" {
+		veleroImage = "gcr.azk8s.cn/heptio-images/velero:v1.1.0"
+	} else {
+		veleroImage = "gcr.io/heptio-images/velero:v1.1.0"
+	}
 
 	// Install BackupStorageLocation
 	foundBsl := &velerov1.BackupStorageLocation{}
@@ -124,7 +131,7 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 
 	// Install Deployment
 	foundDeployment := &appsv1.Deployment{}
-	deployment := veleroDeployment(namespace)
+	deployment := veleroDeployment(namespace, veleroImage)
 	if err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: "velero"}, foundDeployment); err != nil {
 		if errors.IsNotFound(err) {
 			// Didn't find Deployment
@@ -213,7 +220,7 @@ func credentialsRequest(namespace, name, bucketName string) *minterv1.Credential
 	}
 }
 
-func veleroDeployment(namespace string) *appsv1.Deployment {
+func veleroDeployment(namespace string, veleroImage string) *appsv1.Deployment {
 	deployment := veleroInstall.Deployment(namespace,
 		veleroInstall.WithEnvFromSecretKey(strings.ToUpper(awsCredsSecretIDKey), credentialsRequestName, awsCredsSecretIDKey),
 		veleroInstall.WithEnvFromSecretKey(strings.ToUpper(awsCredsSecretAccessKey), credentialsRequestName, awsCredsSecretAccessKey),

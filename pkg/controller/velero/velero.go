@@ -27,6 +27,9 @@ import (
 const (
 	awsCredsSecretIDKey          = "aws_access_key_id"     // #nosec G101
 	awsCredsSecretAccessKey      = "aws_secret_access_key" // #nosec G101
+	veleroImageRegistry          = "gcr.io/heptio-images"
+	veleroImageRegistryCN        = "gcr.azk8s.cn/heptio-images"
+	veleroImageTag               = "velero:v1.1.0"
 	credentialsRequestName       = "velero-iam-credentials"
 	defaultBackupStorageLocation = "default"
 )
@@ -37,15 +40,8 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 	locationConfig := make(map[string]string)
 	locationConfig["region"] = platformStatus.AWS.Region
 
-	// Use chinese mirror for the upstream image in AWS china regions
-	var veleroImage string
-	if locationConfig["region"] == "cn-north-1" || locationConfig["region"] == "cn-northwest-1" {
-		veleroImage = "gcr.azk8s.cn/heptio-images/velero:v1.1.0"
-	} else {
-		veleroImage = "gcr.io/heptio-images/velero:v1.1.0"
-	}
-
 	// Install BackupStorageLocation
+	veleroImage := generateVeleroImage(locationConfig["region"])
 	foundBsl := &velerov1.BackupStorageLocation{}
 	bsl := veleroInstall.BackupStorageLocation(namespace, strings.ToLower(string(platformStatus.Type)), instance.Status.S3Bucket.Name, "", locationConfig)
 	if err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: defaultBackupStorageLocation}, foundBsl); err != nil {
@@ -291,4 +287,21 @@ func veleroDeployment(namespace string, veleroImage string) *appsv1.Deployment {
 	}
 
 	return deployment
+}
+
+func generateVeleroImage(region string) string {
+	cnRegion := []string{"cn-north-1", "cn-northwest-1"}
+
+	// Use global image by default
+	veleroImage := veleroImageRegistry + "/" + veleroImageTag
+
+	// Use the image in Chinese mirror if running on AWS China
+	for _, v := range cnRegion {
+		if region == v {
+			veleroImage = veleroImageRegistryCN + "/" + veleroImageTag
+			break
+		}
+	}
+
+	return veleroImage
 }

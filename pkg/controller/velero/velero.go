@@ -22,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	endpoints "github.com/aws/aws-sdk-go/aws/endpoints"
 )
 
 const (
@@ -98,8 +99,12 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 	}
 
 	// Install CredentialsRequest
+	partition, ok := endpoints.PartitionForRegion(endpoints.DefaultPartitions(), locationConfig["region"])
+	if !ok {
+		return reconcile.Result{}, fmt.Errorf("no partition found for region %q", locationConfig["region"])
+	}
 	foundCr := &minterv1.CredentialsRequest{}
-	cr := credentialsRequest(namespace, credentialsRequestName, instance.Status.S3Bucket.Name)
+	cr := credentialsRequest(namespace, credentialsRequestName, partition.ID(), instance.Status.S3Bucket.Name)
 	if err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: credentialsRequestName}, foundCr); err != nil {
 		if errors.IsNotFound(err) {
 			// Didn't find CredentialsRequest
@@ -156,7 +161,7 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 	return reconcile.Result{}, nil
 }
 
-func credentialsRequest(namespace, name, bucketName string) *minterv1.CredentialsRequest {
+func credentialsRequest(namespace, name, partitionID, bucketName string) *minterv1.CredentialsRequest {
 	codec, _ := minterv1.NewCodec()
 	awsProvSpec, _ := codec.EncodeProviderSpec(
 		&minterv1.AWSProviderSpec{
@@ -185,14 +190,14 @@ func credentialsRequest(namespace, name, bucketName string) *minterv1.Credential
 						"s3:AbortMultipartUpload",
 						"s3:ListMultipartUploadParts",
 					},
-					Resource: fmt.Sprintf("arn:aws:s3:::%s/*", bucketName),
+					Resource: fmt.Sprintf("arn:%s:s3:::%s/*", partitionID, bucketName),
 				},
 				{
 					Effect: "Allow",
 					Action: []string{
 						"s3:ListBucket",
 					},
-					Resource: fmt.Sprintf("arn:aws:s3:::%s", bucketName),
+					Resource: fmt.Sprintf("arn:%s:s3:::%s", partitionID, bucketName),
 				},
 			},
 		})

@@ -30,6 +30,8 @@ unexport GOFLAGS
 GOENV=GOOS=linux GOARCH=amd64 CGO_ENABLED=0
 GOBUILDFLAGS=-gcflags="all=-trimpath=${GOPATH}" -asmflags="all=-trimpath=${GOPATH}"
 
+CONTAINER_ENGINE=$(shell command -v podman 2>/dev/null || command -v docker 2>/dev/null)
+
 # ex, -v
 TESTOPTS :=
 
@@ -47,13 +49,13 @@ isclean:
 
 .PHONY: build
 build: isclean envtest
-	docker build --build-arg "GOPROXY=${GOPROXY}" . -f $(OPERATOR_DOCKERFILE) -t $(OPERATOR_IMAGE_URI)
-	docker tag $(OPERATOR_IMAGE_URI) $(OPERATOR_IMAGE_URI_LATEST)
+	$(CONTAINER_ENGINE) build . -f $(OPERATOR_DOCKERFILE) -t $(OPERATOR_IMAGE_URI)
+	$(CONTAINER_ENGINE) tag $(OPERATOR_IMAGE_URI) $(OPERATOR_IMAGE_URI_LATEST)
 
 .PHONY: push
 push:
-	docker push $(OPERATOR_IMAGE_URI)
-	docker push $(OPERATOR_IMAGE_URI_LATEST)
+	$(CONTAINER_ENGINE) push $(OPERATOR_IMAGE_URI)
+	$(CONTAINER_ENGINE) push $(OPERATOR_IMAGE_URI_LATEST)
 
 .PHONY: verify
 verify: ## Lint code
@@ -61,11 +63,11 @@ verify: ## Lint code
 
 .PHONY: gobuild
 gobuild: ## Build binary
-	${GOENV} go build ${GOBUILDFLAGS} -o ${BINFILE} ${MAINPACKAGE}
+	$(GOENV) go build $(GOBUILDFLAGS) -o $(BINFILE) $(MAINPACKAGE)
 
 .PHONY: gotest
 gotest:
-	go test $(TESTOPTS) $(shell GO111MODULE=$(GO111MODULE) GOPROXY=$(GOPROXY) go list -mod=readonly -e ./... | egrep -v "/(vendor)/")
+	go test $(TESTOPTS) $(shell go list -mod=readonly -e ./... | egrep -v "/(vendor)/")
 
 .PHONY: envtest
 envtest: isclean

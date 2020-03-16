@@ -6,6 +6,7 @@ import (
 
 	veleroCR "github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha1"
 	"github.com/openshift/managed-velero-operator/pkg/s3"
+	"github.com/prometheus/common/log"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/go-logr/logr"

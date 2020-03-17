@@ -4,15 +4,10 @@ import (
 	"context"
 	"fmt"
 	"time"
-
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/prometheus/common/log"
-
 	operatorapi "github.com/openshift/api/operator/v1"
-
-	"github.com/openshift/cluster-image-registry-operator/defaults"
-	"github.com/openshift/cluster-image-registry-operator/pkg/storage/util"
 )
 
 

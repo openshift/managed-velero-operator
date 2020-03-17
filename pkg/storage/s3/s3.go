@@ -39,14 +39,14 @@ func NewDriver(ctx context.Context, cfg *configv1.InfrastructureStatus) *driver 
 // and apply any provided tags
 func (d *driver) CreateStorage(reqLogger logr.Logger, r *ReconcileVelero, instance *mangedv1alpha1.Velero, infraName string) error {
 
-	
+	var err error
+
 	// Create an S3 client based on the region we received
 	s3Client, err := s3.NewS3Client(r.kubeClient, d.cfg.Region)
 	if err != nil {
 		return err
 	}
 
-	var err error
 	bucketLog := reqLogger.WithValues("S3Bucket.Name", instance.Status.S3Bucket.Name, "S3Bucket.Region", d.cfg.Region)
 
 	// This switch handles the provisioning steps/checks
@@ -191,7 +191,7 @@ func (d *driver) StorageExists(client, r *ReconcileVelero, bucketName string) (b
 		Bucket: aws.String(bucketName),
 	}
 
-	_, err := s3Client.HeadBucket(input)
+	_, err = s3Client.HeadBucket(input)
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {

@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/openshift/managed-velero-operator/pkg/controller/velero"
 	"github.com/prometheus/common/log"
 )
 
@@ -36,7 +37,7 @@ func NewDriver(ctx context.Context, cfg *configv1.InfrastructureStatus) *driver 
 
 // CreateStorage attempts to create an s3 bucket
 // and apply any provided tags
-func (d *driver) CreateStorage(reqLogger logr.Logger, r *ReconcileVelero, instance *mangedv1alpha1.Velero, infraName string) error {
+func (d *driver) CreateStorage(reqLogger logr.Logger, r *velero.ReconcileVelero, instance *mangedv1alpha1.Velero, infraName string) error {
 
 	var err error
 
@@ -178,7 +179,7 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, r *ReconcileVelero, instan
 }
 
 // StorageExists checks that the bucket exists, and that we have access to it.
-func (d *driver) StorageExists(client, r *ReconcileVelero, bucketName string) (bool, error) {
+func (d *driver) StorageExists(client, r *velero.ReconcileVeleroReconcileVelero, bucketName string) (bool, error) {
 
 	//create an S3 Client
 	s3Client, err := s3.NewS3Client(r.kubeClient, d.cfg.Region)

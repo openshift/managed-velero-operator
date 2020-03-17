@@ -4,15 +4,15 @@ import (
 	"context"
 	"fmt"
 	"time"
+
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/prometheus/common/log"
-	operatorapi "github.com/openshift/api/operator/v1"
 )
 
-
 const (
-	bucketPrefix = "managed-velero-backups-"
+	bucketPrefix                 = "managed-velero-backups-"
 	defaultBackupStorageLocation = "default"
 )
 
@@ -21,7 +21,7 @@ type S3 struct {
 }
 
 type driver struct {
-	Config: *S3
+	Config  *S3
 	Context context.Context
 }
 
@@ -30,10 +30,9 @@ type driver struct {
 func NewDriver(ctx context.Context, cfg *configv1.InfrastructureStatus) *driver {
 	return &driver{
 		Context: ctx,
-		Config: &S3{Region: cfg.Region}
+		Config:  &S3{Region: cfg.Region},
 	}
 }
-
 
 // CreateStorage attempts to create an s3 bucket
 // and apply any provided tags
@@ -109,12 +108,12 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, r *ReconcileVelero, instan
 					return fmt.Errorf("error occurred when creating bucket %v: %v", instance.Status.S3Bucket.Name, aerr.Error())
 				}
 			} else {
-				return  fmt.Errorf("error occurred when creating bucket %v: %v", instance.Status.S3Bucket.Name, err.Error())
+				return fmt.Errorf("error occurred when creating bucket %v: %v", instance.Status.S3Bucket.Name, err.Error())
 			}
 		}
 		err = s3.TagBucket(s3Client, instance.Status.S3Bucket.Name, defaultBackupStorageLocation, infraName)
 		if err != nil {
-			return  fmt.Errorf("error occurred when tagging bucket %v: %v", instance.Status.S3Bucket.Name, err.Error())
+			return fmt.Errorf("error occurred when tagging bucket %v: %v", instance.Status.S3Bucket.Name, err.Error())
 		}
 	}
 
@@ -123,14 +122,14 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, r *ReconcileVelero, instan
 	exists, err := s3.StorageExists(r, instance.Status.S3Bucket.Name)
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
-			return  fmt.Errorf("error occurred when verifying bucket %v: %v", instance.Status.S3Bucket.Name, aerr.Error())
+			return fmt.Errorf("error occurred when verifying bucket %v: %v", instance.Status.S3Bucket.Name, aerr.Error())
 		}
-		return  fmt.Errorf("error occurred when verifying bucket %v: %v", instance.Status.S3Bucket.Name, err.Error())
+		return fmt.Errorf("error occurred when verifying bucket %v: %v", instance.Status.S3Bucket.Name, err.Error())
 	}
 	if !exists {
 		bucketLog.Error(nil, "S3 bucket doesn't appear to exist")
 		instance.Status.S3Bucket.Provisioned = false
-		return  r.statusUpdate(reqLogger, instance)
+		return r.statusUpdate(reqLogger, instance)
 	}
 
 	// Encrypt S3 bucket
@@ -138,9 +137,9 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, r *ReconcileVelero, instan
 	err = s3.EncryptBucket(s3Client, instance.Status.S3Bucket.Name)
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
-			return  fmt.Errorf("error occurred when encrypting bucket %v: %v", instance.Status.S3Bucket.Name, aerr.Error())
+			return fmt.Errorf("error occurred when encrypting bucket %v: %v", instance.Status.S3Bucket.Name, aerr.Error())
 		}
-		return  fmt.Errorf("error occurred when encrypting bucket %v: %v", instance.Status.S3Bucket.Name, err.Error())
+		return fmt.Errorf("error occurred when encrypting bucket %v: %v", instance.Status.S3Bucket.Name, err.Error())
 	}
 
 	// Block public access to S3 bucket
@@ -148,9 +147,9 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, r *ReconcileVelero, instan
 	err = s3.BlockBucketPublicAccess(s3Client, instance.Status.S3Bucket.Name)
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
-			return  fmt.Errorf("error occurred when blocking public access to bucket %v: %v", instance.Status.S3Bucket.Name, aerr.Error())
+			return fmt.Errorf("error occurred when blocking public access to bucket %v: %v", instance.Status.S3Bucket.Name, aerr.Error())
 		}
-		return  fmt.Errorf("error occurred when blocking public access to bucket %v: %v", instance.Status.S3Bucket.Name, err.Error())
+		return fmt.Errorf("error occurred when blocking public access to bucket %v: %v", instance.Status.S3Bucket.Name, err.Error())
 	}
 
 	// Configure lifecycle rules on S3 bucket
@@ -158,23 +157,23 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, r *ReconcileVelero, instan
 	err = s3.SetBucketLifecycle(s3Client, instance.Status.S3Bucket.Name)
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
-			return  fmt.Errorf("error occurred when configuring lifecycle rules on bucket %v: %v", instance.Status.S3Bucket.Name, aerr.Error())
+			return fmt.Errorf("error occurred when configuring lifecycle rules on bucket %v: %v", instance.Status.S3Bucket.Name, aerr.Error())
 		}
-		return  fmt.Errorf("error occurred when configuring lifecycle rules on bucket %v: %v", instance.Status.S3Bucket.Name, err.Error())
+		return fmt.Errorf("error occurred when configuring lifecycle rules on bucket %v: %v", instance.Status.S3Bucket.Name, err.Error())
 	}
 
 	// Make sure that tags are applied to buckets
 	bucketLog.Info("Enforcing S3 Bucket tags on S3 Bucket")
 	err = s3.TagBucket(s3Client, instance.Status.S3Bucket.Name, defaultBackupStorageLocation, infraName)
 	if err != nil {
-		return  fmt.Errorf("error occurred when tagging bucket %v: %v", instance.Status.S3Bucket.Name, err.Error())
+		return fmt.Errorf("error occurred when tagging bucket %v: %v", instance.Status.S3Bucket.Name, err.Error())
 	}
 
 	instance.Status.S3Bucket.Provisioned = true
 	instance.Status.S3Bucket.LastSyncTimestamp = &metav1.Time{
 		Time: time.Now(),
 	}
-	return  r.statusUpdate(reqLogger, instance)
+	return r.statusUpdate(reqLogger, instance)
 
 }
 
@@ -184,7 +183,7 @@ func (d *driver) StorageExists(client, r *ReconcileVelero, bucketName string) (b
 	//create an S3 Client
 	s3Client, err := s3.NewS3Client(r.kubeClient, d.cfg.Region)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	input := &s3.HeadBucketInput{

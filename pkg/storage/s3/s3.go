@@ -8,6 +8,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/go-logr/logr"
+	"github.com/google/uuid"
 	"github.com/openshift/managed-velero-operator/pkg/controller/velero"
 	"github.com/prometheus/common/log"
 )

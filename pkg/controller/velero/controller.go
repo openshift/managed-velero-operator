@@ -8,8 +8,8 @@ import (
 	veleroCR "github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha1"
 	"github.com/openshift/managed-velero-operator/pkg/s3"
 
-	velerov1 "github.com/heptio/velero/pkg/apis/velero/v1"
 	minterv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
+	velerov1 "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
 	appsv1 "k8s.io/api/apps/v1"
 
 	"github.com/cblecker/platformutils"

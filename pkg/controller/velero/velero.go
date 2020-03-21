@@ -8,13 +8,14 @@ import (
 
 	veleroCR "github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha1"
 
-	velerov1 "github.com/heptio/velero/pkg/apis/velero/v1"
-	veleroInstall "github.com/heptio/velero/pkg/install"
 	minterv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
+	velerov1 "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
+	veleroInstall "github.com/vmware-tanzu/velero/pkg/install"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	endpoints "github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/go-logr/logr"
 	configv1 "github.com/openshift/api/config/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -22,15 +23,15 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	endpoints "github.com/aws/aws-sdk-go/aws/endpoints"
 )
 
 const (
 	awsCredsSecretIDKey          = "aws_access_key_id"     // #nosec G101
 	awsCredsSecretAccessKey      = "aws_secret_access_key" // #nosec G101
-	veleroImageRegistry          = "gcr.io/heptio-images"
-	veleroImageRegistryCN        = "gcr.azk8s.cn/heptio-images"
-	veleroImageTag               = "velero:v1.1.0"
+	veleroImageRegistry          = "docker.io/velero"
+	veleroImageRegistryCN        = "registry.docker-cn.com/velero"
+	veleroImageTag               = "velero:v1.3.1"
+	veleroAwsImageTag            = "velero-plugin-for-aws:v1.0.1"
 	credentialsRequestName       = "velero-iam-credentials"
 	defaultBackupStorageLocation = "default"
 )
@@ -42,7 +43,6 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 	locationConfig["region"] = platformStatus.AWS.Region
 
 	// Install BackupStorageLocation
-	veleroImage := generateVeleroImage(locationConfig["region"])
 	foundBsl := &velerov1.BackupStorageLocation{}
 	bsl := veleroInstall.BackupStorageLocation(namespace, strings.ToLower(string(platformStatus.Type)), instance.Status.S3Bucket.Name, "", locationConfig)
 	if err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: defaultBackupStorageLocation}, foundBsl); err != nil {
@@ -132,7 +132,7 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 
 	// Install Deployment
 	foundDeployment := &appsv1.Deployment{}
-	deployment := veleroDeployment(namespace, veleroImage)
+	deployment := veleroDeployment(namespace, determineVeleroImageRgistry(locationConfig["region"]))
 	if err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: "velero"}, foundDeployment); err != nil {
 		if errors.IsNotFound(err) {
 			// Didn't find Deployment
@@ -221,11 +221,12 @@ func credentialsRequest(namespace, name, partitionID, bucketName string) *minter
 	}
 }
 
-func veleroDeployment(namespace string, veleroImage string) *appsv1.Deployment {
+func veleroDeployment(namespace string, veleroImageRegistry string) *appsv1.Deployment {
 	deployment := veleroInstall.Deployment(namespace,
 		veleroInstall.WithEnvFromSecretKey(strings.ToUpper(awsCredsSecretIDKey), credentialsRequestName, awsCredsSecretIDKey),
 		veleroInstall.WithEnvFromSecretKey(strings.ToUpper(awsCredsSecretAccessKey), credentialsRequestName, awsCredsSecretAccessKey),
-		veleroInstall.WithImage(veleroImage),
+		veleroInstall.WithPlugins([]string{veleroImageRegistry + "/" + veleroAwsImageTag}),
+		veleroInstall.WithImage(veleroImageRegistry + "/" + veleroImageTag),
 	)
 
 	replicas := int32(1)
@@ -237,6 +238,8 @@ func veleroDeployment(namespace string, veleroImage string) *appsv1.Deployment {
 	deployment.Spec.Replicas = &replicas
 	deployment.Spec.RevisionHistoryLimit = &revisionHistoryLimit
 	deployment.Spec.ProgressDeadlineSeconds = &progressDeadlineSeconds
+	deployment.Spec.Template.Spec.InitContainers[0].TerminationMessagePath = "/dev/termination-log"
+	deployment.Spec.Template.Spec.InitContainers[0].TerminationMessagePolicy = "File"
 	deployment.Spec.Template.Spec.Containers[0].Env[1].ValueFrom.FieldRef.APIVersion = "v1"
 	deployment.Spec.Template.Spec.Containers[0].Ports[0].Protocol = "TCP"
 	deployment.Spec.Template.Spec.Containers[0].TerminationMessagePath = "/dev/termination-log"
@@ -294,19 +297,16 @@ func veleroDeployment(namespace string, veleroImage string) *appsv1.Deployment {
 	return deployment
 }
 
-func generateVeleroImage(region string) string {
+func determineVeleroImageRgistry(region string) string {
 	cnRegion := []string{"cn-north-1", "cn-northwest-1"}
-
-	// Use global image by default
-	veleroImage := veleroImageRegistry + "/" + veleroImageTag
 
 	// Use the image in Chinese mirror if running on AWS China
 	for _, v := range cnRegion {
 		if region == v {
-			veleroImage = veleroImageRegistryCN + "/" + veleroImageTag
-			break
+			return veleroImageRegistryCN
 		}
 	}
 
-	return veleroImage
+	// Use global image by default
+	return veleroImageRegistry
 }

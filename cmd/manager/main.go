@@ -15,10 +15,10 @@ import (
 
 	"github.com/openshift/managed-velero-operator/pkg/apis"
 	"github.com/openshift/managed-velero-operator/pkg/controller"
-	"github.com/openshift/managed-velero-operator/pkg/util/platform"
 	"github.com/openshift/managed-velero-operator/pkg/velero"
 	"github.com/openshift/managed-velero-operator/version"
 
+	"github.com/cblecker/platformutils"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	kubemetrics "github.com/operator-framework/operator-sdk/pkg/kube-metrics"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
@@ -167,15 +167,20 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Create k8s client to perform startup tasks
+	// Create k8s clients to perform startup tasks
 	startupClient, err := crclient.New(cfg, crclient.Options{Scheme: mgr.GetScheme()})
 	if err != nil {
 		log.Error(err, "Unable to create operator startup client")
 		os.Exit(1)
 	}
+	pc, err := platformutils.NewClient(context.TODO())
+	if err != nil {
+		log.Error(err, "Unable to create platformutils client")
+		os.Exit(1)
+	}
 
 	// Get infrastructureStatus so we can discover the platform we are running on
-	infraStatus, err := platform.GetInfrastructureStatus(startupClient)
+	infraStatus, err := pc.GetInfrastructureStatus()
 	if err != nil {
 		log.Error(err, "Failed to retrieve infrastructure status")
 		os.Exit(1)
@@ -183,7 +188,7 @@ func main() {
 
 	// Verify platform is in support platforms list
 	// TODO: expand support to other platforms
-	if !platform.IsPlatformSupported(infraStatus.PlatformStatus.Type, supportedPlatforms) {
+	if !platformutils.IsPlatformSupported(infraStatus.PlatformStatus.Type, supportedPlatforms) {
 		log.Error(fmt.Errorf("expected %v got %v", supportedPlatforms, infraStatus.PlatformStatus.Type), "Unsupported platform")
 		os.Exit(1)
 	}

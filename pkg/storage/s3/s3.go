@@ -62,17 +62,17 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroCR.Velero,
 
 		// Use an existing bucket, if it exists.
 		log.Info("No S3 bucket defined. Searching for existing bucket to use")
-		bucketlist, err := s3.ListBuckets(s3Client)
+		bucketlist, err := ListBuckets(s3Client)
 		if err != nil {
 			return err
 		}
 
-		bucketinfo, err := s3.ListBucketTags(s3Client, bucketlist)
+		bucketinfo, err := ListBucketTags(s3Client, bucketlist)
 		if err != nil {
 			return err
 		}
 
-		existingBucket := s3.FindMatchingTags(bucketinfo, infraName)
+		existingBucket := FindMatchingTags(bucketinfo, infraName)
 		if existingBucket != "" {
 			log.Info(fmt.Sprintf("Recovered existing bucket: %s", existingBucket))
 			instance.Status.S3Bucket.Name = existingBucket
@@ -82,7 +82,7 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroCR.Velero,
 
 		// Prepare to create a new bucket, if none exist.
 		proposedName := generateBucketName(bucketPrefix)
-		proposedBucketExists, err := s3.StorageExists(r, proposedName)
+		proposedBucketExists, err := StorageExists(r, proposedName)
 		if err != nil {
 			return err
 		}
@@ -101,7 +101,7 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroCR.Velero,
 
 		// Create S3 bucket
 		bucketLog.Info("Creating S3 Bucket")
-		err = s3.CreateBucket(s3Client, instance.Status.S3Bucket.Name)
+		err = CreateBucket(s3Client, instance.Status.S3Bucket.Name)
 		if err != nil {
 			if aerr, ok := err.(awserr.Error); ok {
 				switch aerr.Code() {
@@ -118,7 +118,7 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroCR.Velero,
 				return fmt.Errorf("error occurred when creating bucket %v: %v", instance.Status.S3Bucket.Name, err.Error())
 			}
 		}
-		err = s3.TagBucket(s3Client, instance.Status.S3Bucket.Name, defaultBackupStorageLocation, infraName)
+		err = TagBucket(s3Client, instance.Status.S3Bucket.Name, defaultBackupStorageLocation, infraName)
 		if err != nil {
 			return fmt.Errorf("error occurred when tagging bucket %v: %v", instance.Status.S3Bucket.Name, err.Error())
 		}
@@ -126,7 +126,7 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroCR.Velero,
 
 	// Verify S3 bucket exists
 	bucketLog.Info("Verifing S3 Bucket exists")
-	exists, err := s3.StorageExists(r, instance.Status.S3Bucket.Name)
+	exists, err := StorageExists(r, instance.Status.S3Bucket.Name)
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			return fmt.Errorf("error occurred when verifying bucket %v: %v", instance.Status.S3Bucket.Name, aerr.Error())
@@ -141,7 +141,7 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroCR.Velero,
 
 	// Encrypt S3 bucket
 	bucketLog.Info("Enforcing S3 Bucket encryption")
-	err = s3.EncryptBucket(s3Client, instance.Status.S3Bucket.Name)
+	err = EncryptBucket(s3Client, instance.Status.S3Bucket.Name)
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			return fmt.Errorf("error occurred when encrypting bucket %v: %v", instance.Status.S3Bucket.Name, aerr.Error())
@@ -151,7 +151,7 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroCR.Velero,
 
 	// Block public access to S3 bucket
 	bucketLog.Info("Enforcing S3 Bucket public access policy")
-	err = s3.BlockBucketPublicAccess(s3Client, instance.Status.S3Bucket.Name)
+	err = BlockBucketPublicAccess(s3Client, instance.Status.S3Bucket.Name)
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			return fmt.Errorf("error occurred when blocking public access to bucket %v: %v", instance.Status.S3Bucket.Name, aerr.Error())
@@ -161,7 +161,7 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroCR.Velero,
 
 	// Configure lifecycle rules on S3 bucket
 	bucketLog.Info("Enforcing S3 Bucket lifecycle rules on S3 Bucket")
-	err = s3.SetBucketLifecycle(s3Client, instance.Status.S3Bucket.Name)
+	err = SetBucketLifecycle(s3Client, instance.Status.S3Bucket.Name)
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			return fmt.Errorf("error occurred when configuring lifecycle rules on bucket %v: %v", instance.Status.S3Bucket.Name, aerr.Error())
@@ -171,7 +171,7 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroCR.Velero,
 
 	// Make sure that tags are applied to buckets
 	bucketLog.Info("Enforcing S3 Bucket tags on S3 Bucket")
-	err = s3.TagBucket(s3Client, instance.Status.S3Bucket.Name, defaultBackupStorageLocation, infraName)
+	err = TagBucket(s3Client, instance.Status.S3Bucket.Name, defaultBackupStorageLocation, infraName)
 	if err != nil {
 		return fmt.Errorf("error occurred when tagging bucket %v: %v", instance.Status.S3Bucket.Name, err.Error())
 	}
@@ -188,7 +188,7 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroCR.Velero,
 func (d *driver) StorageExists(bucketName string) (bool, error) {
 
 	//create an S3 Client
-	s3Client, err := s3.NewS3Client(d.kubeClient, d.cfg.Region)
+	s3Client, err := NewS3Client(d.kubeClient, d.cfg.Region)
 	if err != nil {
 		return false, err
 	}

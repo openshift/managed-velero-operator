@@ -7,12 +7,12 @@ import (
 
 	veleroCR "github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha1"
 	"github.com/openshift/managed-velero-operator/pkg/s3"
-	"github.com/openshift/managed-velero-operator/pkg/util/platform"
 
-	velerov1 "github.com/heptio/velero/pkg/apis/velero/v1"
 	minterv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
+	velerov1 "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
 	appsv1 "k8s.io/api/apps/v1"
 
+	"github.com/cblecker/platformutils"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -127,11 +127,11 @@ func (r *ReconcileVelero) Reconcile(request reconcile.Request) (reconcile.Result
 	}
 
 	// Grab infrastructureStatus to determine where OpenShift is installed.
-	infrastructureStatusClient, err := platform.GetInfrastructureClient()
+	pc, err := platformutils.NewClient(context.TODO())
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	infraStatus, err := platform.GetInfrastructureStatus(infrastructureStatusClient)
+	infraStatus, err := pc.GetInfrastructureStatus()
 	if err != nil {
 		return reconcile.Result{}, err
 	}

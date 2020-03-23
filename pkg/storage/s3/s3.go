@@ -82,7 +82,7 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroCR.Velero,
 
 		// Prepare to create a new bucket, if none exist.
 		proposedName := generateBucketName(bucketPrefix)
-		proposedBucketExists, err := StorageExists(r, proposedName)
+		proposedBucketExists, err := d.StorageExists(proposedName)
 		if err != nil {
 			return err
 		}
@@ -126,7 +126,7 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroCR.Velero,
 
 	// Verify S3 bucket exists
 	bucketLog.Info("Verifing S3 Bucket exists")
-	exists, err := StorageExists(r, instance.Status.S3Bucket.Name)
+	exists, err := d.StorageExists(instance.Status.S3Bucket.Name)
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			return fmt.Errorf("error occurred when verifying bucket %v: %v", instance.Status.S3Bucket.Name, aerr.Error())

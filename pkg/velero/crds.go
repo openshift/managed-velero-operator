@@ -19,10 +19,10 @@ func InstallVeleroCRDs(log logr.Logger, client client.Client) error {
 	var err error
 
 	// Install CRDs
-	for _, unstrcuturedCrd := range veleroInstall.AllCRDs().Items {
+	for _, unstructuredCrd := range veleroInstall.AllCRDs().Items {
 		foundCrd := &apiextv1beta1.CustomResourceDefinition{}
 		crd := &apiextv1beta1.CustomResourceDefinition{}
-		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(unstrcuturedCrd.Object, crd); err != nil {
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(unstructuredCrd.Object, crd); err != nil {
 			return err
 		}
 		// Add Conversion to the spec, as this will be returned in the founcCrd

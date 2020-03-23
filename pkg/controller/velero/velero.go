@@ -132,7 +132,7 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 
 	// Install Deployment
 	foundDeployment := &appsv1.Deployment{}
-	deployment := veleroDeployment(namespace, determineVeleroImageRgistry(locationConfig["region"]))
+	deployment := veleroDeployment(namespace, determineVeleroImageRegistry(locationConfig["region"]))
 	if err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: "velero"}, foundDeployment); err != nil {
 		if errors.IsNotFound(err) {
 			// Didn't find Deployment
@@ -297,7 +297,7 @@ func veleroDeployment(namespace string, veleroImageRegistry string) *appsv1.Depl
 	return deployment
 }
 
-func determineVeleroImageRgistry(region string) string {
+func determineVeleroImageRegistry(region string) string {
 	cnRegion := []string{"cn-north-1", "cn-northwest-1"}
 
 	// Use the image in Chinese mirror if running on AWS China

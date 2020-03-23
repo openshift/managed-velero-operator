@@ -1,7 +1,12 @@
 package v1alpha1
 
 import (
+	"context"
+	"fmt"
 	"time"
+
+	"github.com/go-logr/logr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func (i *Velero) S3BucketReconcileRequired(reconcilePeriod time.Duration) bool {
@@ -18,4 +23,14 @@ func (i *Velero) S3BucketReconcileRequired(reconcilePeriod time.Duration) bool {
 	}
 
 	return false
+}
+
+func (i *Velero) StatusUpdate(reqLogger logr.Logger, kubeClient client.Client) error {
+	err := kubeClient.Status().Update(context.TODO(), i)
+	if err != nil {
+		reqLogger.Error(err, fmt.Sprintf("Status update for %s failed", i.Name))
+	} else {
+		reqLogger.Info(fmt.Sprintf("Status updated for %s", i.Name))
+	}
+	return err
 }

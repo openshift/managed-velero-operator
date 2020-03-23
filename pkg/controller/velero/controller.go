@@ -144,12 +144,12 @@ func (r *ReconcileVelero) Reconcile(request reconcile.Request) (reconcile.Result
 	}
 
 	//get a driver
-	drv = storage.NewDriver(infraStatus)
+	drv = storage.NewDriver(infraStatus, r.client)
 
 	// Check if bucket needs to be reconciled
 	if instance.S3BucketReconcileRequired(s3ReconcilePeriod) {
 		//Create Storage
-		err := drv.CreateStorage(reqLogger, r, instance, infraStatus.InfrastructureName)
+		err := drv.CreateStorage(reqLogger, instance, infraStatus.InfrastructureName)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -158,14 +158,4 @@ func (r *ReconcileVelero) Reconcile(request reconcile.Request) (reconcile.Result
 
 	// Now go provision Velero
 	return r.provisionVelero(reqLogger, request.Namespace, infraStatus.PlatformStatus, instance)
-}
-
-func (r *ReconcileVelero) statusUpdate(reqLogger logr.Logger, instance *veleroCR.Velero) error {
-	err := r.client.Status().Update(context.TODO(), instance)
-	if err != nil {
-		reqLogger.Error(err, fmt.Sprintf("Status update for %s failed", instance.Name))
-	} else {
-		reqLogger.Info(fmt.Sprintf("Status updated for %s", instance.Name))
-	}
-	return err
 }

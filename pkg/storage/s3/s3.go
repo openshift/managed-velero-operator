@@ -10,6 +10,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
+	configv1 "github.com/openshift/api/config/v1"
+	veleroCR "github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha1"
 	"github.com/prometheus/common/log"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -41,7 +43,7 @@ func NewDriver(ctx context.Context, cfg *configv1.InfrastructureStatus, clnt cli
 
 // CreateStorage attempts to create an s3 bucket
 // and apply any provided tags
-func (d *driver) CreateStorage(reqLogger logr.Logger, instance *mangedv1alpha1.Velero, infraName string) error {
+func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroCR.Velero, infraName string) error {
 
 	var err error
 

@@ -8,6 +8,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/s3"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
 	configv1 "github.com/openshift/api/config/v1"
@@ -36,7 +38,7 @@ type driver struct {
 func NewDriver(ctx context.Context, cfg *configv1.InfrastructureStatus, clnt client.Client) *driver {
 	return &driver{
 		Context:    ctx,
-		Config:     &S3{Region: cfg.Region},
+		Config:     &S3{Region: cfg.PlatformStatus.AWS.Region},
 		kubeClient: clnt,
 	}
 }
@@ -48,12 +50,12 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroCR.Velero,
 	var err error
 
 	// Create an S3 client based on the region we received
-	s3Client, err := s3.NewS3Client(d.kubeClient, d.cfg.Region)
+	s3Client, err := NewS3Client(d.kubeClient, d.Config.Region)
 	if err != nil {
 		return err
 	}
 
-	bucketLog := reqLogger.WithValues("S3Bucket.Name", instance.Status.S3Bucket.Name, "S3Bucket.Region", d.cfg.Region)
+	bucketLog := reqLogger.WithValues("S3Bucket.Name", instance.Status.S3Bucket.Name, "S3Bucket.Region", d.Config.Region)
 
 	// This switch handles the provisioning steps/checks
 	switch {
@@ -105,11 +107,11 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroCR.Velero,
 		if err != nil {
 			if aerr, ok := err.(awserr.Error); ok {
 				switch aerr.Code() {
-				case awss3.ErrCodeBucketAlreadyExists:
+				case s3.ErrCodeBucketAlreadyExists:
 					bucketLog.Info("Bucket exists, but is not owned by current user; retrying")
 					instance.Status.S3Bucket.Name = ""
 					return instance.StatusUpdate(reqLogger, d.kubeClient)
-				case awss3.ErrCodeBucketAlreadyOwnedByYou:
+				case s3.ErrCodeBucketAlreadyOwnedByYou:
 					bucketLog.Info("Bucket exists, and is owned by current user; continue")
 				default:
 					return fmt.Errorf("error occurred when creating bucket %v: %v", instance.Status.S3Bucket.Name, aerr.Error())
@@ -177,7 +179,7 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroCR.Velero,
 	}
 
 	instance.Status.S3Bucket.Provisioned = true
-	instance.Status.S3Bucket.LastSyncTimestamp = &metav1.Time{
+	instance.Status.S3Bucket.LastSyncTimestamp = &v1.Time{
 		Time: time.Now(),
 	}
 	return instance.StatusUpdate(reqLogger, d.kubeClient)
@@ -188,7 +190,7 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroCR.Velero,
 func (d *driver) StorageExists(bucketName string) (bool, error) {
 
 	//create an S3 Client
-	s3Client, err := NewS3Client(d.kubeClient, d.cfg.Region)
+	s3Client, err := NewS3Client(d.kubeClient, d.Config.Region)
 	if err != nil {
 		return false, err
 	}

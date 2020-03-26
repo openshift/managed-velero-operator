@@ -22,7 +22,7 @@ func NewDriver(cfg *configv1.InfrastructureStatus, clnt client.Client) Driver {
 	ctx := context.Background()
 	var driver Driver
 
-	if cfg.Platform == "AWS" {
+	if cfg.PlatformStatus.Type == "AWS" {
 		driver = s3.NewDriver(ctx, cfg, clnt)
 	}
 

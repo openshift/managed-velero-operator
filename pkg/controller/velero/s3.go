@@ -1,7 +1,6 @@
 package velero
 
 import (
-	"context"
 	"fmt"
 	"time"
 
@@ -157,14 +156,4 @@ func (r *ReconcileVelero) provisionS3(reqLogger logr.Logger, s3Client s3.Client,
 func generateBucketName(prefix string) string {
 	id := uuid.New().String()
 	return prefix + id
-}
-
-func (r *ReconcileVelero) statusUpdate(reqLogger logr.Logger, instance *veleroCR.Velero) error {
-	err := r.client.Status().Update(context.TODO(), instance)
-	if err != nil {
-		reqLogger.Error(err, fmt.Sprintf("Status update for %s failed", instance.Name))
-	} else {
-		reqLogger.Info(fmt.Sprintf("Status updated for %s", instance.Name))
-	}
-	return err
 }

@@ -264,10 +264,12 @@ func TagBucket(s3Client Client, bucketName string, backUpLocation string, infraN
 	if err != nil {
 		return fmt.Errorf("unable to clear %v bucket tags: %v", bucketName, err)
 	}
+
 	input := CreateBucketTaggingInput(bucketName, map[string]string{
-		bucketTagBackupLocation: backUpLocation,
-		bucketTagInfraName:      infraName,
+		"bucketTagBackupLocation": backUpLocation,
+		"bucketTagInfraName":      infraName,
 	})
+
 	_, err = s3Client.PutBucketTagging(input)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -326,11 +328,11 @@ func FindMatchingTags(buckets map[string]*s3.GetBucketTaggingOutput, infraName s
 	var possiblematch string
 	for bucket, tags := range buckets {
 		for _, tag := range tags.TagSet {
-			if *tag.Key == bucketTagInfraName && *tag.Value == infraName {
+			if *tag.Key == "bucketTagInfraName" && *tag.Value == infraName {
 				tagMatchesCluster = true
 				possiblematch = bucket
 			}
-			if *tag.Key == bucketTagBackupLocation {
+			if *tag.Key == "bucketTagBackupLocation" {
 				tagMatchesVelero = true
 				possiblematch = bucket
 			}

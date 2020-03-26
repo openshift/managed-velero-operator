@@ -22,6 +22,8 @@ import (
 const (
 	awsCredsSecretIDKey     = "aws_access_key_id"     // #nosec G101
 	awsCredsSecretAccessKey = "aws_secret_access_key" // #nosec G101
+	bucketTagBackupLocation = "velero.io/backup-location"
+	bucketTagInfraName      = "velero.io/infrastructureName"
 )
 
 var (
@@ -266,8 +268,8 @@ func TagBucket(s3Client Client, bucketName string, backUpLocation string, infraN
 	}
 
 	input := CreateBucketTaggingInput(bucketName, map[string]string{
-		"bucketTagBackupLocation": backUpLocation,
-		"bucketTagInfraName":      infraName,
+		bucketTagBackupLocation: backUpLocation,
+		bucketTagInfraName:      infraName,
 	})
 
 	_, err = s3Client.PutBucketTagging(input)
@@ -328,11 +330,11 @@ func FindMatchingTags(buckets map[string]*s3.GetBucketTaggingOutput, infraName s
 	var possiblematch string
 	for bucket, tags := range buckets {
 		for _, tag := range tags.TagSet {
-			if *tag.Key == "bucketTagInfraName" && *tag.Value == infraName {
+			if *tag.Key == bucketTagInfraName && *tag.Value == infraName {
 				tagMatchesCluster = true
 				possiblematch = bucket
 			}
-			if *tag.Key == "bucketTagBackupLocation" {
+			if *tag.Key == bucketTagBackupLocation {
 				tagMatchesVelero = true
 				possiblematch = bucket
 			}

@@ -1,12 +1,12 @@
 package velero
 
 import (
+	"context"
 	"fmt"
 	"time"
 
 	veleroCR "github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha1"
 	"github.com/openshift/managed-velero-operator/pkg/s3"
-	"github.com/prometheus/common/log"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/go-logr/logr"
@@ -157,4 +157,14 @@ func (r *ReconcileVelero) provisionS3(reqLogger logr.Logger, s3Client s3.Client,
 func generateBucketName(prefix string) string {
 	id := uuid.New().String()
 	return prefix + id
+}
+
+func (r *ReconcileVelero) statusUpdate(reqLogger logr.Logger, instance *veleroCR.Velero) error {
+	err := r.client.Status().Update(context.TODO(), instance)
+	if err != nil {
+		reqLogger.Error(err, fmt.Sprintf("Status update for %s failed", instance.Name))
+	} else {
+		reqLogger.Info(fmt.Sprintf("Status updated for %s", instance.Name))
+	}
+	return err
 }

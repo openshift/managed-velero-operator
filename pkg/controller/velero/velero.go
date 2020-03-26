@@ -9,6 +9,7 @@ import (
 	veleroCR "github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha1"
 
 	minterv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
+	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	velerov1 "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
 	veleroInstall "github.com/vmware-tanzu/velero/pkg/install"
 	appsv1 "k8s.io/api/apps/v1"
@@ -18,6 +19,7 @@ import (
 	endpoints "github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/go-logr/logr"
 	configv1 "github.com/openshift/api/config/v1"
+	"github.com/operator-framework/operator-sdk/pkg/metrics"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -34,6 +36,8 @@ const (
 	veleroAwsImageTag            = "velero-plugin-for-aws:v1.0.1"
 	credentialsRequestName       = "velero-iam-credentials"
 	defaultBackupStorageLocation = "default"
+	metricsServiceName           = "velero-metrics"
+	metricsPort int32            = 8085
 )
 
 func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace string, platformStatus *configv1.PlatformStatus, instance *veleroCR.Velero) (reconcile.Result, error) {
@@ -153,6 +157,60 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 			reqLogger.Info("Updating Deployment", "foundDeployment.Spec", foundDeployment.Spec, "deployment.Spec", deployment.Spec)
 			foundDeployment.Spec = *deployment.Spec.DeepCopy()
 			if err = r.client.Update(context.TODO(), foundDeployment); err != nil {
+				return reconcile.Result{}, err
+			}
+		}
+	}
+
+	// Install Metrics Service
+	foundService := &corev1.Service{}
+	service := veleroService(namespace)
+	if err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: metricsServiceName}, foundService); err != nil {
+		if errors.IsNotFound(err) {
+			// Didn't find Service
+			reqLogger.Info("Creating Service")
+			if err := controllerutil.SetControllerReference(instance, service, r.scheme); err != nil {
+				return reconcile.Result{}, err
+			}
+			if err = r.client.Create(context.TODO(), service); err != nil {
+				return reconcile.Result{}, err
+			}
+			// We need a populated foundService (with a UID) to generate the
+			// ServiceMonitor below, so requeue and fetch it on the next pass.
+			return reconcile.Result{Requeue: true}, nil
+		}
+		return reconcile.Result{}, err
+	}
+	// Service exists, check if it's updated.
+	// Note: We leave Spec.ClusterIP unspecified for the master to set.
+	//       Copy it from foundService to satisfy reflect.DeepEqual.
+	service.Spec.ClusterIP = foundService.Spec.ClusterIP
+	if !reflect.DeepEqual(foundService.Spec, service.Spec) {
+		// Specs aren't equal, update and fix.
+		reqLogger.Info("Updating Service", "foundService.Spec", foundService.Spec, "service.Spec", service.Spec)
+		foundService.Spec = *service.Spec.DeepCopy()
+		if err = r.client.Update(context.TODO(), foundService); err != nil {
+			return reconcile.Result{}, err
+		}
+	}
+
+	// Install Metrics ServiceMonitor
+	foundServiceMonitor := &monitoringv1.ServiceMonitor{}
+	serviceMonitor := metrics.GenerateServiceMonitor(foundService)
+	if err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: metricsServiceName}, foundServiceMonitor); err != nil {
+		// Didn't find ServiceMonitor
+		reqLogger.Info("Creating ServiceMonitor")
+		// Note, GenerateServiceMonitor already set an owner reference.
+		if err = r.client.Create(context.TODO(), serviceMonitor); err != nil {
+			return reconcile.Result{}, err
+		}
+	} else {
+		// ServiceMonitor exists, check if it's updated.
+		if !reflect.DeepEqual(foundServiceMonitor.Spec, serviceMonitor.Spec) {
+			// Specs aren't equal, update and fix.
+			reqLogger.Info("Updating ServiceMonitor", "foundServiceMonitor.Spec", foundServiceMonitor.Spec, "serviceMonitor.Spec", serviceMonitor.Spec)
+			foundServiceMonitor.Spec = *serviceMonitor.Spec.DeepCopy()
+			if err = r.client.Update(context.TODO(), foundServiceMonitor); err != nil {
 				return reconcile.Result{}, err
 			}
 		}
@@ -295,6 +353,35 @@ func veleroDeployment(namespace string, veleroImageRegistry string) *appsv1.Depl
 	}
 
 	return deployment
+}
+
+func veleroService(namespace string) *corev1.Service {
+	return &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Service",
+			APIVersion: corev1.SchemeGroupVersion.String(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      metricsServiceName,
+			Namespace: namespace,
+			Labels:    map[string]string{"name": "velero"},
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{
+				{
+					Name:       metrics.OperatorPortName,
+					Protocol:   corev1.ProtocolTCP,
+					Port:       metricsPort,
+					TargetPort: intstr.IntOrString{Type: intstr.Int, IntVal: metricsPort},
+				},
+			},
+			Selector: map[string]string{
+				"component": "velero",
+				"deploy":    "velero",
+			},
+			Type: corev1.ServiceTypeClusterIP,
+		},
+	}
 }
 
 func determineVeleroImageRegistry(region string) string {

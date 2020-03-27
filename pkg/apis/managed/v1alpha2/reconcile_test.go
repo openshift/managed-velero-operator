@@ -1,4 +1,4 @@
-package v1alpha1
+package v1alpha2
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestS3BucketReconcileRequired(t *testing.T) {
+func TestStorageBucketReconcileRequired(t *testing.T) {
 	var testcases = []struct {
 		testName          string
 		bucketName        string
@@ -60,10 +60,10 @@ func TestS3BucketReconcileRequired(t *testing.T) {
 	for _, tc := range testcases {
 		t.Logf("Running scenario %q", tc.testName)
 
-		instance := &Velero{
-			Spec: VeleroSpec{},
-			Status: VeleroStatus{
-				S3Bucket: S3Bucket{
+		instance := &VeleroInstall{
+			Spec: VeleroInstallSpec{},
+			Status: VeleroInstallStatus{
+				StorageBucket: StorageBucket{
 					Name:        tc.bucketName,
 					Provisioned: tc.bucketProvisioned,
 				},
@@ -71,10 +71,10 @@ func TestS3BucketReconcileRequired(t *testing.T) {
 		}
 
 		if !tc.timestamp.IsZero() {
-			instance.Status.S3Bucket.LastSyncTimestamp = &metav1.Time{Time: tc.timestamp}
+			instance.Status.StorageBucket.LastSyncTimestamp = &metav1.Time{Time: tc.timestamp}
 		}
 
-		reconcile := instance.S3BucketReconcileRequired(tc.reconcilePeriod)
+		reconcile := instance.StorageBucketReconcileRequired(tc.reconcilePeriod)
 
 		if reconcile != tc.shouldReconcile {
 			if tc.shouldReconcile {

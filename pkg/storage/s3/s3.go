@@ -13,7 +13,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
 	configv1 "github.com/openshift/api/config/v1"
-	veleroCR "github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha1"
+	veleroInstallCR "github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2"
 	"github.com/prometheus/common/log"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -45,7 +45,7 @@ func NewDriver(ctx context.Context, cfg *configv1.InfrastructureStatus, clnt cli
 
 // CreateStorage attempts to create an s3 bucket
 // and apply any provided tags
-func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroCR.Velero, infraName string) error {
+func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.VeleroInstall, infraName string) error {
 
 	var err error
 
@@ -55,12 +55,12 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroCR.Velero,
 		return err
 	}
 
-	bucketLog := reqLogger.WithValues("S3Bucket.Name", instance.Status.S3Bucket.Name, "S3Bucket.Region", d.Config.Region)
+	bucketLog := reqLogger.WithValues("StorageBucket.Name", instance.Status.StorageBucket.Name, "StorageBucket.Region", d.Config.Region)
 
 	// This switch handles the provisioning steps/checks
 	switch {
 	// We don't yet have a bucket name selected
-	case instance.Status.S3Bucket.Name == "":
+	case instance.Status.StorageBucket.Name == "":
 
 		// Use an existing bucket, if it exists.
 		log.Info("No S3 bucket defined. Searching for existing bucket to use")
@@ -77,8 +77,8 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroCR.Velero,
 		existingBucket := FindMatchingTags(bucketinfo, infraName)
 		if existingBucket != "" {
 			log.Info(fmt.Sprintf("Recovered existing bucket: %s", existingBucket))
-			instance.Status.S3Bucket.Name = existingBucket
-			instance.Status.S3Bucket.Provisioned = true
+			instance.Status.StorageBucket.Name = existingBucket
+			instance.Status.StorageBucket.Provisioned = true
 			return instance.StatusUpdate(reqLogger, d.kubeClient)
 		}
 
@@ -93,93 +93,93 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroCR.Velero,
 		}
 
 		log.Info("Setting proposed bucket name", "S3Bucket.Name", proposedName)
-		instance.Status.S3Bucket.Name = proposedName
-		instance.Status.S3Bucket.Provisioned = false
+		instance.Status.StorageBucket.Name = proposedName
+		instance.Status.StorageBucket.Provisioned = false
 		return instance.StatusUpdate(reqLogger, d.kubeClient)
 
 	// We have a bucket name, but haven't kicked off provisioning of the bucket yet
-	case instance.Status.S3Bucket.Name != "" && !instance.Status.S3Bucket.Provisioned:
+	case instance.Status.StorageBucket.Name != "" && !instance.Status.StorageBucket.Provisioned:
 		bucketLog.Info("S3 bucket defined, but not provisioned")
 
 		// Create S3 bucket
 		bucketLog.Info("Creating S3 Bucket")
-		err = CreateBucket(s3Client, instance.Status.S3Bucket.Name)
+		err = CreateBucket(s3Client, instance.Status.StorageBucket.Name)
 		if err != nil {
 			if aerr, ok := err.(awserr.Error); ok {
 				switch aerr.Code() {
 				case s3.ErrCodeBucketAlreadyExists:
 					bucketLog.Info("Bucket exists, but is not owned by current user; retrying")
-					instance.Status.S3Bucket.Name = ""
+					instance.Status.StorageBucket.Name = ""
 					return instance.StatusUpdate(reqLogger, d.kubeClient)
 				case s3.ErrCodeBucketAlreadyOwnedByYou:
 					bucketLog.Info("Bucket exists, and is owned by current user; continue")
 				default:
-					return fmt.Errorf("error occurred when creating bucket %v: %v", instance.Status.S3Bucket.Name, aerr.Error())
+					return fmt.Errorf("error occurred when creating bucket %v: %v", instance.Status.StorageBucket.Name, aerr.Error())
 				}
 			} else {
-				return fmt.Errorf("error occurred when creating bucket %v: %v", instance.Status.S3Bucket.Name, err.Error())
+				return fmt.Errorf("error occurred when creating bucket %v: %v", instance.Status.StorageBucket.Name, err.Error())
 			}
 		}
-		err = TagBucket(s3Client, instance.Status.S3Bucket.Name, defaultBackupStorageLocation, infraName)
+		err = TagBucket(s3Client, instance.Status.StorageBucket.Name, defaultBackupStorageLocation, infraName)
 		if err != nil {
-			return fmt.Errorf("error occurred when tagging bucket %v: %v", instance.Status.S3Bucket.Name, err.Error())
+			return fmt.Errorf("error occurred when tagging bucket %v: %v", instance.Status.StorageBucket.Name, err.Error())
 		}
 	}
 
 	// Verify S3 bucket exists
 	bucketLog.Info("Verifing S3 Bucket exists")
-	exists, err := d.StorageExists(instance.Status.S3Bucket.Name)
+	exists, err := d.StorageExists(instance.Status.StorageBucket.Name)
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
-			return fmt.Errorf("error occurred when verifying bucket %v: %v", instance.Status.S3Bucket.Name, aerr.Error())
+			return fmt.Errorf("error occurred when verifying bucket %v: %v", instance.Status.StorageBucket.Name, aerr.Error())
 		}
-		return fmt.Errorf("error occurred when verifying bucket %v: %v", instance.Status.S3Bucket.Name, err.Error())
+		return fmt.Errorf("error occurred when verifying bucket %v: %v", instance.Status.StorageBucket.Name, err.Error())
 	}
 	if !exists {
 		bucketLog.Error(nil, "S3 bucket doesn't appear to exist")
-		instance.Status.S3Bucket.Provisioned = false
+		instance.Status.StorageBucket.Provisioned = false
 		return instance.StatusUpdate(reqLogger, d.kubeClient)
 	}
 
 	// Encrypt S3 bucket
 	bucketLog.Info("Enforcing S3 Bucket encryption")
-	err = EncryptBucket(s3Client, instance.Status.S3Bucket.Name)
+	err = EncryptBucket(s3Client, instance.Status.StorageBucket.Name)
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
-			return fmt.Errorf("error occurred when encrypting bucket %v: %v", instance.Status.S3Bucket.Name, aerr.Error())
+			return fmt.Errorf("error occurred when encrypting bucket %v: %v", instance.Status.StorageBucket.Name, aerr.Error())
 		}
-		return fmt.Errorf("error occurred when encrypting bucket %v: %v", instance.Status.S3Bucket.Name, err.Error())
+		return fmt.Errorf("error occurred when encrypting bucket %v: %v", instance.Status.StorageBucket.Name, err.Error())
 	}
 
 	// Block public access to S3 bucket
 	bucketLog.Info("Enforcing S3 Bucket public access policy")
-	err = BlockBucketPublicAccess(s3Client, instance.Status.S3Bucket.Name)
+	err = BlockBucketPublicAccess(s3Client, instance.Status.StorageBucket.Name)
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
-			return fmt.Errorf("error occurred when blocking public access to bucket %v: %v", instance.Status.S3Bucket.Name, aerr.Error())
+			return fmt.Errorf("error occurred when blocking public access to bucket %v: %v", instance.Status.StorageBucket.Name, aerr.Error())
 		}
-		return fmt.Errorf("error occurred when blocking public access to bucket %v: %v", instance.Status.S3Bucket.Name, err.Error())
+		return fmt.Errorf("error occurred when blocking public access to bucket %v: %v", instance.Status.StorageBucket.Name, err.Error())
 	}
 
 	// Configure lifecycle rules on S3 bucket
 	bucketLog.Info("Enforcing S3 Bucket lifecycle rules on S3 Bucket")
-	err = SetBucketLifecycle(s3Client, instance.Status.S3Bucket.Name)
+	err = SetBucketLifecycle(s3Client, instance.Status.StorageBucket.Name)
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
-			return fmt.Errorf("error occurred when configuring lifecycle rules on bucket %v: %v", instance.Status.S3Bucket.Name, aerr.Error())
+			return fmt.Errorf("error occurred when configuring lifecycle rules on bucket %v: %v", instance.Status.StorageBucket.Name, aerr.Error())
 		}
-		return fmt.Errorf("error occurred when configuring lifecycle rules on bucket %v: %v", instance.Status.S3Bucket.Name, err.Error())
+		return fmt.Errorf("error occurred when configuring lifecycle rules on bucket %v: %v", instance.Status.StorageBucket.Name, err.Error())
 	}
 
 	// Make sure that tags are applied to buckets
 	bucketLog.Info("Enforcing S3 Bucket tags on S3 Bucket")
-	err = TagBucket(s3Client, instance.Status.S3Bucket.Name, defaultBackupStorageLocation, infraName)
+	err = TagBucket(s3Client, instance.Status.StorageBucket.Name, defaultBackupStorageLocation, infraName)
 	if err != nil {
-		return fmt.Errorf("error occurred when tagging bucket %v: %v", instance.Status.S3Bucket.Name, err.Error())
+		return fmt.Errorf("error occurred when tagging bucket %v: %v", instance.Status.StorageBucket.Name, err.Error())
 	}
 
-	instance.Status.S3Bucket.Provisioned = true
-	instance.Status.S3Bucket.LastSyncTimestamp = &v1.Time{
+	instance.Status.StorageBucket.Provisioned = true
+	instance.Status.StorageBucket.LastSyncTimestamp = &v1.Time{
 		Time: time.Now(),
 	}
 	return instance.StatusUpdate(reqLogger, d.kubeClient)

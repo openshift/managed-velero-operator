@@ -5,15 +5,15 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/openshift/managed-velero-operator/pkg/storage"
+
 	veleroCR "github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha1"
-	"github.com/openshift/managed-velero-operator/pkg/s3"
 
 	minterv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
 	velerov1 "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
 	appsv1 "k8s.io/api/apps/v1"
 
 	"github.com/cblecker/platformutils"
-	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -141,29 +141,19 @@ func (r *ReconcileVelero) Reconcile(request reconcile.Request) (reconcile.Result
 		return reconcile.Result{}, fmt.Errorf("unable to determine AWS region")
 	}
 
-	// Create an S3 client based on the region we received
-	s3Client, err := s3.NewS3Client(r.client, infraStatus.PlatformStatus.AWS.Region)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
+	//get a driver
+	drv := storage.NewDriver(infraStatus, r.client)
 
 	// Check if bucket needs to be reconciled
 	if instance.S3BucketReconcileRequired(s3ReconcilePeriod) {
-		// Always directly return from this, as we will either update the
-		// timestamp when complete, or return an error.
-		return r.provisionS3(reqLogger, s3Client, instance, infraStatus.InfrastructureName)
+		//Create Storage
+		err := drv.CreateStorage(reqLogger, instance, infraStatus.InfrastructureName)
+		if err != nil {
+			fmt.Println(err)
+		}
+
 	}
 
 	// Now go provision Velero
 	return r.provisionVelero(reqLogger, request.Namespace, infraStatus.PlatformStatus, instance)
-}
-
-func (r *ReconcileVelero) statusUpdate(reqLogger logr.Logger, instance *veleroCR.Velero) error {
-	err := r.client.Status().Update(context.TODO(), instance)
-	if err != nil {
-		reqLogger.Error(err, fmt.Sprintf("Status update for %s failed", instance.Name))
-	} else {
-		reqLogger.Info(fmt.Sprintf("Status updated for %s", instance.Name))
-	}
-	return err
 }

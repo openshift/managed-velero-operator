@@ -12,9 +12,8 @@ import (
 )
 
 const (
-	clusterInfraName             = "fakeCluster"
-	region                       = "us-east-1"
-	defaultBackupStorageLocation = "default"
+	clusterInfraName = "fakeCluster"
+	region           = "us-east-1"
 )
 
 var awsConfig = &aws.Config{Region: aws.String(region)}

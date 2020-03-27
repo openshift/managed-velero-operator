@@ -36,8 +36,6 @@ const (
 	veleroAwsImageTag            = "velero-plugin-for-aws:v1.0.1"
 	credentialsRequestName       = "velero-iam-credentials"
 	defaultBackupStorageLocation = "default"
-	metricsServiceName           = "velero-metrics"
-	metricsPort int32            = 8085
 )
 
 func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace string, platformStatus *configv1.PlatformStatus, instance *veleroCR.Velero) (reconcile.Result, error) {
@@ -164,8 +162,12 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 
 	// Install Metrics Service
 	foundService := &corev1.Service{}
-	service := veleroService(namespace)
-	if err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: metricsServiceName}, foundService); err != nil {
+	service := metricsServiceFromDeployment(deployment)
+	serviceName := types.NamespacedName{
+		Namespace: service.ObjectMeta.Namespace,
+		Name:      service.ObjectMeta.Name,
+	}
+	if err = r.client.Get(context.TODO(), serviceName, foundService); err != nil {
 		if errors.IsNotFound(err) {
 			// Didn't find Service
 			reqLogger.Info("Creating Service")
@@ -197,7 +199,11 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 	// Install Metrics ServiceMonitor
 	foundServiceMonitor := &monitoringv1.ServiceMonitor{}
 	serviceMonitor := metrics.GenerateServiceMonitor(foundService)
-	if err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: metricsServiceName}, foundServiceMonitor); err != nil {
+	serviceMonitorName := types.NamespacedName{
+		Namespace: serviceMonitor.ObjectMeta.Namespace,
+		Name:      serviceMonitor.ObjectMeta.Name,
+	}
+	if err = r.client.Get(context.TODO(), serviceMonitorName, foundServiceMonitor); err != nil {
 		// Didn't find ServiceMonitor
 		reqLogger.Info("Creating ServiceMonitor")
 		// Note, GenerateServiceMonitor already set an owner reference.
@@ -355,31 +361,44 @@ func veleroDeployment(namespace string, veleroImageRegistry string) *appsv1.Depl
 	return deployment
 }
 
-func veleroService(namespace string) *corev1.Service {
+func metricsServiceFromDeployment(deployment *appsv1.Deployment) *corev1.Service {
+	// Build a list of ServicePorts from the container ports of the
+	// deployment's pod template having "metrics" in the port name.
+	var servicePorts []corev1.ServicePort
+	for _, container := range deployment.Spec.Template.Spec.Containers {
+		for _, port := range container.Ports {
+			if strings.Contains(port.Name, "metrics") {
+				servicePorts = append(servicePorts, corev1.ServicePort{
+					Name:       port.Name,
+					Protocol:   port.Protocol,
+					Port:       port.ContainerPort,
+					TargetPort: intstr.FromInt(int(port.ContainerPort)),
+				})
+			}
+		}
+	}
+
+	// Copy labels from the deployment's pod template.
+	serviceSelector := make(map[string]string)
+	// XXX Looping in lieu of an ObjectMeta.CopyLabels() method.
+	for k, v := range deployment.Spec.Template.ObjectMeta.Labels {
+		serviceSelector[k] = v
+	}
+
 	return &corev1.Service{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Service",
 			APIVersion: corev1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      metricsServiceName,
-			Namespace: namespace,
-			Labels:    map[string]string{"name": "velero"},
+			Name:      deployment.ObjectMeta.Name + "-metrics",
+			Namespace: deployment.ObjectMeta.Namespace,
+			Labels:    map[string]string{"name": deployment.ObjectMeta.Name},
 		},
 		Spec: corev1.ServiceSpec{
-			Ports: []corev1.ServicePort{
-				{
-					Name:       metrics.OperatorPortName,
-					Protocol:   corev1.ProtocolTCP,
-					Port:       metricsPort,
-					TargetPort: intstr.IntOrString{Type: intstr.Int, IntVal: metricsPort},
-				},
-			},
-			Selector: map[string]string{
-				"component": "velero",
-				"deploy":    "velero",
-			},
-			Type: corev1.ServiceTypeClusterIP,
+			Ports:    servicePorts,
+			Selector: serviceSelector,
+			Type:     corev1.ServiceTypeClusterIP,
 		},
 	}
 }

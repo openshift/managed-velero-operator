@@ -7,7 +7,7 @@ import (
 
 	"github.com/openshift/managed-velero-operator/pkg/storage"
 
-	veleroCR "github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha1"
+	veleroInstallCR "github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2"
 
 	minterv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
 	velerov1 "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
@@ -50,7 +50,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource, Velero
-	err = c.Watch(&source.Kind{Type: &veleroCR.Velero{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &veleroInstallCR.VeleroInstall{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
@@ -58,7 +58,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Watch for changes to BackupStorageLocation
 	err = c.Watch(&source.Kind{Type: &velerov1.BackupStorageLocation{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &veleroCR.Velero{},
+		OwnerType:    &veleroInstallCR.VeleroInstall{},
 	})
 	if err != nil {
 		return err
@@ -67,7 +67,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Watch for changes to VolumeSnapshotLocation
 	err = c.Watch(&source.Kind{Type: &velerov1.VolumeSnapshotLocation{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &veleroCR.Velero{},
+		OwnerType:    &veleroInstallCR.VeleroInstall{},
 	})
 	if err != nil {
 		return err
@@ -76,7 +76,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Watch for changes to CredentialsRequest
 	err = c.Watch(&source.Kind{Type: &minterv1.CredentialsRequest{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &veleroCR.Velero{},
+		OwnerType:    &veleroInstallCR.VeleroInstall{},
 	})
 	if err != nil {
 		return err
@@ -85,7 +85,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Watch for changes to Deployments
 	err = c.Watch(&source.Kind{Type: &appsv1.Deployment{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &veleroCR.Velero{},
+		OwnerType:    &veleroInstallCR.VeleroInstall{},
 	})
 	if err != nil {
 		return err
@@ -113,7 +113,7 @@ func (r *ReconcileVelero) Reconcile(request reconcile.Request) (reconcile.Result
 	var err error
 
 	// Fetch the Velero instance
-	instance := &veleroCR.Velero{}
+	instance := &veleroInstallCR.VeleroInstall{}
 	err = r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -145,7 +145,7 @@ func (r *ReconcileVelero) Reconcile(request reconcile.Request) (reconcile.Result
 	drv := storage.NewDriver(infraStatus, r.client)
 
 	// Check if bucket needs to be reconciled
-	if instance.S3BucketReconcileRequired(s3ReconcilePeriod) {
+	if instance.StorageBucketReconcileRequired(s3ReconcilePeriod) {
 		//Create Storage
 		err := drv.CreateStorage(reqLogger, instance, infraStatus.InfrastructureName)
 		if err != nil {

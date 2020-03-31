@@ -16,7 +16,6 @@ require (
 	github.com/cblecker/platformutils v0.0.0-20200321191645-443abe7fea11
 	github.com/coreos/prometheus-operator v0.34.0
 	github.com/operator-framework/operator-sdk v0.16.0
-	github.com/prometheus/common v0.7.0
 	github.com/spf13/pflag v1.0.5
 	k8s.io/api v0.17.4
 	k8s.io/apiextensions-apiserver v0.17.2

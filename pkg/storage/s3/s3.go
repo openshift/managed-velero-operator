@@ -14,7 +14,6 @@ import (
 	"github.com/google/uuid"
 	configv1 "github.com/openshift/api/config/v1"
 	veleroInstallCR "github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2"
-	"github.com/prometheus/common/log"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -63,7 +62,7 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.
 	case instance.Status.StorageBucket.Name == "":
 
 		// Use an existing bucket, if it exists.
-		log.Info("No S3 bucket defined. Searching for existing bucket to use")
+		bucketLog.Info("No S3 bucket defined. Searching for existing bucket to use")
 		bucketlist, err := ListBuckets(s3Client)
 		if err != nil {
 			return err
@@ -76,7 +75,7 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.
 
 		existingBucket := FindMatchingTags(bucketinfo, infraName)
 		if existingBucket != "" {
-			log.Info(fmt.Sprintf("Recovered existing bucket: %s", existingBucket))
+			bucketLog.Info("Recovered existing bucket", "StorageBucket.Name", existingBucket)
 			instance.Status.StorageBucket.Name = existingBucket
 			instance.Status.StorageBucket.Provisioned = true
 			return instance.StatusUpdate(reqLogger, d.kubeClient)
@@ -92,7 +91,7 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.
 			return fmt.Errorf("proposed bucket %s already exists, retrying", proposedName)
 		}
 
-		log.Info("Setting proposed bucket name", "S3Bucket.Name", proposedName)
+		bucketLog.Info("Setting proposed bucket name", "StorageBucket.Name", proposedName)
 		instance.Status.StorageBucket.Name = proposedName
 		instance.Status.StorageBucket.Provisioned = false
 		return instance.StatusUpdate(reqLogger, d.kubeClient)

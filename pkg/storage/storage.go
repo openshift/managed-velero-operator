@@ -12,7 +12,7 @@ import (
 
 //Driver interface to be satisfied by all present and future storage cloud providers
 type Driver interface {
-	CreateStorage(logr.Logger, *veleroInstallCR.VeleroInstall, string) error
+	CreateStorage(logr.Logger, *veleroInstallCR.VeleroInstall) error
 	StorageExists(string) (bool, error)
 }
 

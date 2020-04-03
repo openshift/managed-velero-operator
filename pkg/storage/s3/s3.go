@@ -20,6 +20,7 @@ import (
 
 type S3 struct {
 	Region string
+	InfraName string
 }
 
 type driver struct {
@@ -33,14 +34,17 @@ type driver struct {
 func NewDriver(ctx context.Context, cfg *configv1.InfrastructureStatus, clnt client.Client) *driver {
 	return &driver{
 		Context:    ctx,
-		Config:     &S3{Region: cfg.PlatformStatus.AWS.Region},
+		Config:     &S3{
+			Region: cfg.PlatformStatus.AWS.Region,
+			InfraName: cfg.InfrastructureName,
+		},
 		kubeClient: clnt,
 	}
 }
 
 // CreateStorage attempts to create an s3 bucket
 // and apply any provided tags
-func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.VeleroInstall, infraName string) error {
+func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.VeleroInstall) error {
 
 	var err error
 
@@ -69,7 +73,7 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.
 			return err
 		}
 
-		existingBucket := FindMatchingTags(bucketinfo, infraName)
+		existingBucket := FindMatchingTags(bucketinfo, d.Config.InfraName)
 		if existingBucket != "" {
 			bucketLog.Info("Recovered existing bucket", "StorageBucket.Name", existingBucket)
 			instance.Status.StorageBucket.Name = existingBucket
@@ -115,7 +119,7 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.
 				return fmt.Errorf("error occurred when creating bucket %v: %v", instance.Status.StorageBucket.Name, err.Error())
 			}
 		}
-		err = TagBucket(s3Client, instance.Status.StorageBucket.Name, storageConstants.DefaultVeleroBackupStorageLocation, infraName)
+		err = TagBucket(s3Client, instance.Status.StorageBucket.Name, storageConstants.DefaultVeleroBackupStorageLocation, d.Config.InfraName)
 		if err != nil {
 			return fmt.Errorf("error occurred when tagging bucket %v: %v", instance.Status.StorageBucket.Name, err.Error())
 		}
@@ -168,7 +172,7 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.
 
 	// Make sure that tags are applied to buckets
 	bucketLog.Info("Enforcing S3 Bucket tags on S3 Bucket")
-	err = TagBucket(s3Client, instance.Status.StorageBucket.Name, storageConstants.DefaultVeleroBackupStorageLocation, infraName)
+	err = TagBucket(s3Client, instance.Status.StorageBucket.Name, storageConstants.DefaultVeleroBackupStorageLocation, d.Config.InfraName)
 	if err != nil {
 		return fmt.Errorf("error occurred when tagging bucket %v: %v", instance.Status.StorageBucket.Name, err.Error())
 	}

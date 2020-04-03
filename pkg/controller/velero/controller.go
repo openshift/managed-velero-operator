@@ -147,7 +147,7 @@ func (r *ReconcileVelero) Reconcile(request reconcile.Request) (reconcile.Result
 	// Check if bucket needs to be reconciled
 	if instance.StorageBucketReconcileRequired(s3ReconcilePeriod) {
 		//Create Storage
-		err := drv.CreateStorage(reqLogger, instance, infraStatus.InfrastructureName)
+		err := drv.CreateStorage(reqLogger, instance)
 		if err != nil {
 			fmt.Println(err)
 		}

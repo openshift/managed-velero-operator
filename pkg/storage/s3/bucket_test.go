@@ -3,6 +3,7 @@ package s3
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -97,7 +98,15 @@ func (c *mockAWSClient) GetPublicAccessBlock(input *s3.GetPublicAccessBlockInput
 
 // ListBuckets implements the ListBuckets method for mockAWSClient.
 func (c *mockAWSClient) ListBuckets(input *s3.ListBucketsInput) (*s3.ListBucketsOutput, error) {
-	return c.s3Client.ListBuckets(input)
+	return &s3.ListBucketsOutput{
+		Buckets: []*s3.Bucket{
+			{
+				CreationDate: &time.Time{},
+				Name: aws.String("testBucket"),
+			},
+		},
+		Owner: &s3.Owner{},
+	}, nil
 }
 
 // PutBucketEncryption implements the PutBucketEncryption method for mockAWSClient.
@@ -284,6 +293,61 @@ func TestDoesBucketExist(t *testing.T) {
 			}
 			if got != tt.want {
 				t.Errorf("DoesBucketExist() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestListBucketsInRegion(t *testing.T) {
+	type args struct {
+		s3Client Client
+		region   string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    *s3.ListBucketsOutput
+		wantErr bool
+	}{
+		{
+			name: "List buckets in the region of 'testBucket'",
+			args: args{
+				s3Client: &fakeClient,
+				region: region,
+			},
+			want: &s3.ListBucketsOutput{
+				Buckets: []*s3.Bucket{
+					{
+						CreationDate: &time.Time{},
+						Name: aws.String("testBucket"),
+					},
+				},
+				Owner: &s3.Owner{},
+			},
+			wantErr: false,
+		},
+		{
+			name: "List buckets in a different region than 'testBucket'",
+			args: args{
+				s3Client: &fakeClient,
+				region: "ap-northeast-1",
+			},
+			want: &s3.ListBucketsOutput{
+				Buckets: []*s3.Bucket{},
+				Owner: &s3.Owner{},
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ListBucketsInRegion(tt.args.s3Client, tt.args.region)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ListBucketsInRegion() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ListBucketsInRegion() = %v, want %v", got, tt.want)
 			}
 		})
 	}

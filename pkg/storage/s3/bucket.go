@@ -194,6 +194,27 @@ func ListBuckets(s3Client Client) (*s3.ListBucketsOutput, error) {
 	return result, nil
 }
 
+// ListBucketsInRegion lists buckets in the AWS account in the given region.
+func ListBucketsInRegion(s3Client Client, region string) (*s3.ListBucketsOutput, error) {
+	result, err := ListBuckets(s3Client)
+	if err != nil {
+		return result, err
+	}
+	filteredBuckets := []*s3.Bucket{}
+	for _, bucket := range result.Buckets {
+		input := &s3.GetBucketLocationInput{Bucket: bucket.Name}
+		locationResult, err := s3Client.GetBucketLocation(input)
+		if err != nil {
+			fmt.Println(err.Error())
+			return nil, err
+		}
+		if *locationResult.LocationConstraint == region {
+			filteredBuckets = append(filteredBuckets, bucket)
+		}
+	}
+	return &s3.ListBucketsOutput{Buckets: filteredBuckets, Owner: result.Owner}, nil
+}
+
 // ListBucketTags returns a list of s3.GetBucketTagging objects, one for each bucket.
 // If the bucket is not readable, or has no tags, the bucket name is omitted from the taglist.
 // So taglist only contains the list of buckets that have tags.

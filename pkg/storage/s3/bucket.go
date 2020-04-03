@@ -197,9 +197,9 @@ func ListBuckets(s3Client Client) (*s3.ListBucketsOutput, error) {
 // ListBucketTags returns a list of s3.GetBucketTagging objects, one for each bucket.
 // If the bucket is not readable, or has no tags, the bucket name is omitted from the taglist.
 // So taglist only contains the list of buckets that have tags.
-func ListBucketTags(s3Client Client, bucketlist *s3.ListBucketsOutput) (map[string]*s3.GetBucketTaggingOutput, error) {
-	taglist := make(map[string]*s3.GetBucketTaggingOutput)
-	for _, bucket := range bucketlist.Buckets {
+func ListBucketTags(s3Client Client, buckets []*s3.Bucket) (map[string][]*s3.Tag, error) {
+	taglist := make(map[string][]*s3.Tag)
+	for _, bucket := range buckets {
 		request := &s3.GetBucketTaggingInput{
 			Bucket: aws.String(*bucket.Name),
 		}
@@ -220,7 +220,7 @@ func ListBucketTags(s3Client Client, bucketlist *s3.ListBucketsOutput) (map[stri
 				return taglist, err
 			}
 		}
-		taglist[*bucket.Name] = response
+		taglist[*bucket.Name] = response.TagSet
 	}
 	return taglist, nil
 }
@@ -228,11 +228,11 @@ func ListBucketTags(s3Client Client, bucketlist *s3.ListBucketsOutput) (map[stri
 // FindMatchingTags looks through the TagSets for all AWS buckets and determines if
 // any of the buckets are tagged for velero updates for the cluster.
 // If matching tags are found, the bucket name is returned.
-func FindMatchingTags(buckets map[string]*s3.GetBucketTaggingOutput, infraName string) string {
+func FindMatchingTags(buckets map[string][]*s3.Tag, infraName string) string {
 	var tagMatchesCluster, tagMatchesVelero bool
 	var possiblematch string
-	for bucket, tags := range buckets {
-		for _, tag := range tags.TagSet {
+	for bucket, tagset := range buckets {
+		for _, tag := range tagset {
 			if *tag.Key == bucketTagInfraName && *tag.Value == infraName {
 				tagMatchesCluster = true
 				possiblematch = bucket

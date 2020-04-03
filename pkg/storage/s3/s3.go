@@ -68,7 +68,7 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.
 			return err
 		}
 
-		bucketinfo, err := ListBucketTags(s3Client, bucketlist)
+		bucketinfo, err := ListBucketTags(s3Client, bucketlist.Buckets)
 		if err != nil {
 			return err
 		}

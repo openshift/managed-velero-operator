@@ -9,8 +9,8 @@ import (
 	veleroInstallCR "github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2"
 	storageConstants "github.com/openshift/managed-velero-operator/pkg/storage/constants"
 
-	minterv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
 	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
+	minterv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
 	velerov1 "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
 	veleroInstall "github.com/vmware-tanzu/velero/pkg/install"
 	appsv1 "k8s.io/api/apps/v1"
@@ -29,13 +29,13 @@ import (
 )
 
 const (
-	awsCredsSecretIDKey          = "aws_access_key_id"     // #nosec G101
-	awsCredsSecretAccessKey      = "aws_secret_access_key" // #nosec G101
-	veleroImageRegistry          = "docker.io/velero"
-	veleroImageRegistryCN        = "registry.docker-cn.com/velero"
-	veleroImageTag               = "velero:v1.3.1"
-	veleroAwsImageTag            = "velero-plugin-for-aws:v1.0.1"
-	credentialsRequestName       = "velero-iam-credentials"
+	awsCredsSecretIDKey     = "aws_access_key_id"     // #nosec G101
+	awsCredsSecretAccessKey = "aws_secret_access_key" // #nosec G101
+	veleroImageRegistry     = "docker.io/velero"
+	veleroImageRegistryCN   = "registry.docker-cn.com/velero"
+	veleroImageTag          = "velero:v1.3.1"
+	veleroAwsImageTag       = "velero-plugin-for-aws:v1.0.1"
+	credentialsRequestName  = "velero-iam-credentials"
 )
 
 func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace string, platformStatus *configv1.PlatformStatus, instance *veleroInstallCR.VeleroInstall) (reconcile.Result, error) {
@@ -294,7 +294,7 @@ func veleroDeployment(namespace string, veleroImageRegistry string) *appsv1.Depl
 		veleroInstall.WithEnvFromSecretKey(strings.ToUpper(awsCredsSecretIDKey), credentialsRequestName, awsCredsSecretIDKey),
 		veleroInstall.WithEnvFromSecretKey(strings.ToUpper(awsCredsSecretAccessKey), credentialsRequestName, awsCredsSecretAccessKey),
 		veleroInstall.WithPlugins([]string{veleroImageRegistry + "/" + veleroAwsImageTag}),
-		veleroInstall.WithImage(veleroImageRegistry + "/" + veleroImageTag),
+		veleroInstall.WithImage(veleroImageRegistry+"/"+veleroImageTag),
 	)
 
 	replicas := int32(1)

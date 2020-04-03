@@ -19,7 +19,7 @@ import (
 )
 
 type S3 struct {
-	Region string
+	Region    string
 	InfraName string
 }
 
@@ -33,9 +33,9 @@ type driver struct {
 // Used during bootstrapping
 func NewDriver(ctx context.Context, cfg *configv1.InfrastructureStatus, clnt client.Client) *driver {
 	return &driver{
-		Context:    ctx,
-		Config:     &S3{
-			Region: cfg.PlatformStatus.AWS.Region,
+		Context: ctx,
+		Config: &S3{
+			Region:    cfg.PlatformStatus.AWS.Region,
 			InfraName: cfg.InfrastructureName,
 		},
 		kubeClient: clnt,

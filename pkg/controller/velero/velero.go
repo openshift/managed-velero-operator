@@ -204,10 +204,14 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 		Name:      serviceMonitor.ObjectMeta.Name,
 	}
 	if err = r.client.Get(context.TODO(), serviceMonitorName, foundServiceMonitor); err != nil {
-		// Didn't find ServiceMonitor
-		reqLogger.Info("Creating ServiceMonitor")
-		// Note, GenerateServiceMonitor already set an owner reference.
-		if err = r.client.Create(context.TODO(), serviceMonitor); err != nil {
+		if errors.IsNotFound(err) {
+			// Didn't find ServiceMonitor
+			reqLogger.Info("Creating ServiceMonitor")
+			// Note, GenerateServiceMonitor already set an owner reference.
+			if err = r.client.Create(context.TODO(), serviceMonitor); err != nil {
+				return reconcile.Result{}, err
+			}
+		} else {
 			return reconcile.Result{}, err
 		}
 	} else {

@@ -39,6 +39,7 @@ type Client interface {
 	DeleteBucketTagging(*s3.DeleteBucketTaggingInput) (*s3.DeleteBucketTaggingOutput, error)
 	HeadBucket(*s3.HeadBucketInput) (*s3.HeadBucketOutput, error)
 	GetAWSClientConfig() *aws.Config
+	GetBucketLocation(*s3.GetBucketLocationInput) (*s3.GetBucketLocationOutput, error)
 	GetBucketTagging(*s3.GetBucketTaggingInput) (*s3.GetBucketTaggingOutput, error)
 	GetPublicAccessBlock(*s3.GetPublicAccessBlockInput) (*s3.GetPublicAccessBlockOutput, error)
 	ListBuckets(*s3.ListBucketsInput) (*s3.ListBucketsOutput, error)
@@ -68,6 +69,11 @@ func (c *awsClient) GetAWSClientConfig() *aws.Config {
 // HeadBucket implements the HeadBucket method for awsClient.
 func (c *awsClient) HeadBucket(input *s3.HeadBucketInput) (*s3.HeadBucketOutput, error) {
 	return c.s3Client.HeadBucket(input)
+}
+
+// GetBucketLocation implements the GetBucketLocation method for awsClient.
+func (c *awsClient) GetBucketLocation(input *s3.GetBucketLocationInput) (*s3.GetBucketLocationOutput, error) {
+	return c.s3Client.GetBucketLocation(input)
 }
 
 // GetBucketTagging implements the GetBucketTagging method for awsClient.

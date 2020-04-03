@@ -9,6 +9,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
+
+	storageConstants "github.com/openshift/managed-velero-operator/pkg/storage/constants"
 )
 
 const (
@@ -65,7 +67,7 @@ func (c *mockAWSClient) GetBucketTagging(input *s3.GetBucketTaggingInput) (*s3.G
 			TagSet: []*s3.Tag{
 				{
 					Key:   aws.String(bucketTagBackupLocation),
-					Value: aws.String(defaultBackupStorageLocation),
+					Value: aws.String(storageConstants.DefaultVeleroBackupStorageLocation),
 				},
 				{
 					Key:   aws.String(bucketTagInfraName),
@@ -183,7 +185,7 @@ func TestFindMatchingTags(t *testing.T) {
 					TagSet: []*s3.Tag{
 						{
 							Key:   aws.String(bucketTagBackupLocation),
-							Value: aws.String(defaultBackupStorageLocation),
+							Value: aws.String(storageConstants.DefaultVeleroBackupStorageLocation),
 						},
 						{
 							Key:   aws.String(bucketTagInfraName),
@@ -314,7 +316,7 @@ func TestListBucketTags(t *testing.T) {
 					TagSet: []*s3.Tag{
 						{
 							Key:   aws.String(bucketTagBackupLocation),
-							Value: aws.String(defaultBackupStorageLocation),
+							Value: aws.String(storageConstants.DefaultVeleroBackupStorageLocation),
 						},
 						{
 							Key:   aws.String(bucketTagInfraName),

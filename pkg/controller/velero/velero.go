@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	veleroInstallCR "github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2"
+	storageConstants "github.com/openshift/managed-velero-operator/pkg/storage/constants"
 
 	minterv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
 	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
@@ -35,7 +36,6 @@ const (
 	veleroImageTag               = "velero:v1.3.1"
 	veleroAwsImageTag            = "velero-plugin-for-aws:v1.0.1"
 	credentialsRequestName       = "velero-iam-credentials"
-	defaultBackupStorageLocation = "default"
 )
 
 func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace string, platformStatus *configv1.PlatformStatus, instance *veleroInstallCR.VeleroInstall) (reconcile.Result, error) {
@@ -47,7 +47,7 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 	// Install BackupStorageLocation
 	foundBsl := &velerov1.BackupStorageLocation{}
 	bsl := veleroInstall.BackupStorageLocation(namespace, strings.ToLower(string(platformStatus.Type)), instance.Status.StorageBucket.Name, "", locationConfig)
-	if err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: defaultBackupStorageLocation}, foundBsl); err != nil {
+	if err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: storageConstants.DefaultVeleroBackupStorageLocation}, foundBsl); err != nil {
 		if errors.IsNotFound(err) {
 			// Didn't find BackupStorageLocation
 			reqLogger.Info("Creating BackupStorageLocation")

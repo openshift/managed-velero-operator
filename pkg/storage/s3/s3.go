@@ -14,12 +14,8 @@ import (
 	"github.com/google/uuid"
 	configv1 "github.com/openshift/api/config/v1"
 	veleroInstallCR "github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2"
+	storageConstants "github.com/openshift/managed-velero-operator/pkg/storage/constants"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-)
-
-const (
-	bucketPrefix                 = "managed-velero-backups-"
-	defaultBackupStorageLocation = "default"
 )
 
 type S3 struct {
@@ -82,7 +78,7 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.
 		}
 
 		// Prepare to create a new bucket, if none exist.
-		proposedName := generateBucketName(bucketPrefix)
+		proposedName := generateBucketName(storageConstants.StorageBucketPrefix)
 		proposedBucketExists, err := d.StorageExists(proposedName)
 		if err != nil {
 			return err
@@ -119,7 +115,7 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.
 				return fmt.Errorf("error occurred when creating bucket %v: %v", instance.Status.StorageBucket.Name, err.Error())
 			}
 		}
-		err = TagBucket(s3Client, instance.Status.StorageBucket.Name, defaultBackupStorageLocation, infraName)
+		err = TagBucket(s3Client, instance.Status.StorageBucket.Name, storageConstants.DefaultVeleroBackupStorageLocation, infraName)
 		if err != nil {
 			return fmt.Errorf("error occurred when tagging bucket %v: %v", instance.Status.StorageBucket.Name, err.Error())
 		}
@@ -172,7 +168,7 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.
 
 	// Make sure that tags are applied to buckets
 	bucketLog.Info("Enforcing S3 Bucket tags on S3 Bucket")
-	err = TagBucket(s3Client, instance.Status.StorageBucket.Name, defaultBackupStorageLocation, infraName)
+	err = TagBucket(s3Client, instance.Status.StorageBucket.Name, storageConstants.DefaultVeleroBackupStorageLocation, infraName)
 	if err != nil {
 		return fmt.Errorf("error occurred when tagging bucket %v: %v", instance.Status.StorageBucket.Name, err.Error())
 	}

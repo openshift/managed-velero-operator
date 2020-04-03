@@ -8,7 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/s3"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
@@ -178,7 +178,7 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.
 	}
 
 	instance.Status.StorageBucket.Provisioned = true
-	instance.Status.StorageBucket.LastSyncTimestamp = &v1.Time{
+	instance.Status.StorageBucket.LastSyncTimestamp = &metav1.Time{
 		Time: time.Now(),
 	}
 	return instance.StatusUpdate(reqLogger, d.kubeClient)

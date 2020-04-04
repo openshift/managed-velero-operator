@@ -31,18 +31,35 @@ import (
 const (
 	awsCredsSecretIDKey     = "aws_access_key_id"     // #nosec G101
 	awsCredsSecretAccessKey = "aws_secret_access_key" // #nosec G101
-	veleroImageRegistry     = "docker.io/velero"
-	veleroImageRegistryCN   = "registry.docker-cn.com/velero"
-	veleroImageTag          = "velero:v1.3.1"
-	veleroAwsImageTag       = "velero-plugin-for-aws:v1.0.1"
-	credentialsRequestName  = "velero-iam-credentials"
+
+	veleroImageRegistry   = "docker.io/velero"
+	veleroImageRegistryCN = "registry.docker-cn.com/velero"
+
+	veleroImageTag    = "velero:v1.3.1"
+	veleroAwsImageTag = "velero-plugin-for-aws:v1.0.1"
+	veleroGcpImageTag = "velero-plugin-for-gcp:v1.0.1"
+
+	credentialsRequestName = "velero-iam-credentials"
+)
+
+var (
+	awsChinaRegions = []string{"cn-north-1", "cn-northwest-1"}
 )
 
 func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace string, platformStatus *configv1.PlatformStatus, instance *veleroInstallCR.VeleroInstall) (reconcile.Result, error) {
 	var err error
 
-	locationConfig := make(map[string]string)
-	locationConfig["region"] = platformStatus.AWS.Region
+	var locationConfig map[string]string
+	switch platformStatus.Type {
+	case configv1.AWSPlatformType:
+		locationConfig = map[string]string{
+			"region": platformStatus.AWS.Region,
+		}
+	case configv1.GCPPlatformType:
+		// No region configuration needed for GCP
+	default:
+		return reconcile.Result{}, fmt.Errorf("unable to determine platform")
+	}
 
 	// Install BackupStorageLocation
 	foundBsl := &velerov1.BackupStorageLocation{}
@@ -64,7 +81,7 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 		// BackupStorageLocation exists, check if it's updated.
 		if !reflect.DeepEqual(foundBsl.Spec, bsl.Spec) {
 			// Specs aren't equal, update and fix.
-			reqLogger.Info("Updating BackupStorageLocation")
+			reqLogger.Info("Updating BackupStorageLocation", "foundBsl.Spec", foundBsl.Spec, "bsl.Spec", bsl.Spec)
 			foundBsl.Spec = *bsl.Spec.DeepCopy()
 			if err = r.client.Update(context.TODO(), foundBsl); err != nil {
 				return reconcile.Result{}, err
@@ -92,7 +109,7 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 		// VolumeSnapshotLocation exists, check if it's updated.
 		if !reflect.DeepEqual(foundVsl.Spec, vsl.Spec) {
 			// Specs aren't equal, update and fix.
-			reqLogger.Info("Updating VolumeSnapshotLocation")
+			reqLogger.Info("Updating VolumeSnapshotLocation", "foundVsl.Spec", foundVsl.Spec, "vsl.Spec", vsl.Spec)
 			foundVsl.Spec = *vsl.Spec.DeepCopy()
 			if err = r.client.Update(context.TODO(), foundVsl); err != nil {
 				return reconcile.Result{}, err
@@ -101,12 +118,20 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 	}
 
 	// Install CredentialsRequest
-	partition, ok := endpoints.PartitionForRegion(endpoints.DefaultPartitions(), locationConfig["region"])
-	if !ok {
-		return reconcile.Result{}, fmt.Errorf("no partition found for region %q", locationConfig["region"])
-	}
 	foundCr := &minterv1.CredentialsRequest{}
-	cr := credentialsRequest(namespace, credentialsRequestName, partition.ID(), instance.Status.StorageBucket.Name)
+	cr := &minterv1.CredentialsRequest{}
+	switch platformStatus.Type {
+	case configv1.AWSPlatformType:
+		partition, ok := endpoints.PartitionForRegion(endpoints.DefaultPartitions(), locationConfig["region"])
+		if !ok {
+			return reconcile.Result{}, fmt.Errorf("no partition found for region %q", locationConfig["region"])
+		}
+		cr = awsCredentialsRequest(namespace, credentialsRequestName, partition.ID(), instance.Status.StorageBucket.Name)
+	case configv1.GCPPlatformType:
+		cr = gcpCredentialsRequest(namespace, credentialsRequestName)
+	default:
+		return reconcile.Result{}, fmt.Errorf("unable to determine platform")
+	}
 	if err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: credentialsRequestName}, foundCr); err != nil {
 		if errors.IsNotFound(err) {
 			// Didn't find CredentialsRequest
@@ -124,7 +149,7 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 		// CredentialsRequest exists, check if it's updated.
 		if !reflect.DeepEqual(foundCr.Spec, cr.Spec) {
 			// Specs aren't equal, update and fix.
-			reqLogger.Info("Updating CredentialsRequest")
+			reqLogger.Info("Updating CredentialsRequest", "foundCr.Spec", foundCr.Spec, "cr.Spec", cr.Spec)
 			foundCr.Spec = *cr.Spec.DeepCopy()
 			if err = r.client.Update(context.TODO(), foundCr); err != nil {
 				return reconcile.Result{}, err
@@ -134,7 +159,7 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 
 	// Install Deployment
 	foundDeployment := &appsv1.Deployment{}
-	deployment := veleroDeployment(namespace, determineVeleroImageRegistry(locationConfig["region"]))
+	deployment := veleroDeployment(namespace, platformStatus.Type, determineVeleroImageRegistry(platformStatus.Type, locationConfig["region"]))
 	if err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: "velero"}, foundDeployment); err != nil {
 		if errors.IsNotFound(err) {
 			// Didn't find Deployment
@@ -229,9 +254,9 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 	return reconcile.Result{}, nil
 }
 
-func credentialsRequest(namespace, name, partitionID, bucketName string) *minterv1.CredentialsRequest {
+func awsCredentialsRequest(namespace, name, partitionID, bucketName string) *minterv1.CredentialsRequest {
 	codec, _ := minterv1.NewCodec()
-	awsProvSpec, _ := codec.EncodeProviderSpec(
+	provSpec, _ := codec.EncodeProviderSpec(
 		&minterv1.AWSProviderSpec{
 			TypeMeta: metav1.TypeMeta{
 				Kind: "AWSProviderSpec",
@@ -284,18 +309,90 @@ func credentialsRequest(namespace, name, partitionID, bucketName string) *minter
 				Name:      name,
 				Namespace: namespace,
 			},
-			ProviderSpec: awsProvSpec,
+			ProviderSpec: provSpec,
 		},
 	}
 }
 
-func veleroDeployment(namespace string, veleroImageRegistry string) *appsv1.Deployment {
-	deployment := veleroInstall.Deployment(namespace,
-		veleroInstall.WithEnvFromSecretKey(strings.ToUpper(awsCredsSecretIDKey), credentialsRequestName, awsCredsSecretIDKey),
-		veleroInstall.WithEnvFromSecretKey(strings.ToUpper(awsCredsSecretAccessKey), credentialsRequestName, awsCredsSecretAccessKey),
-		veleroInstall.WithPlugins([]string{veleroImageRegistry + "/" + veleroAwsImageTag}),
-		veleroInstall.WithImage(veleroImageRegistry+"/"+veleroImageTag),
-	)
+func gcpCredentialsRequest(namespace, name string) *minterv1.CredentialsRequest {
+	codec, _ := minterv1.NewCodec()
+	provSpec, _ := codec.EncodeProviderSpec(
+		&minterv1.GCPProviderSpec{
+			TypeMeta: metav1.TypeMeta{
+				Kind: "GCPProviderSpec",
+			},
+			PredefinedRoles: []string{
+				"roles/compute.storageAdmin",
+				"roles/iam.serviceAccountUser",
+				"roles/cloudmigration.storageaccess",
+			},
+			SkipServiceCheck: true,
+		})
+
+	return &minterv1.CredentialsRequest{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "CredentialsRequest",
+			APIVersion: minterv1.SchemeGroupVersion.String(),
+		},
+		Spec: minterv1.CredentialsRequestSpec{
+			SecretRef: corev1.ObjectReference{
+				Name:      name,
+				Namespace: namespace,
+			},
+			ProviderSpec: provSpec,
+		},
+	}
+}
+
+func veleroDeployment(namespace string, platform configv1.PlatformType, veleroImageRegistry string) *appsv1.Deployment {
+	var deployment *appsv1.Deployment
+
+	switch platform {
+	case configv1.AWSPlatformType:
+		deployment = veleroInstall.Deployment(namespace,
+			veleroInstall.WithEnvFromSecretKey(strings.ToUpper(awsCredsSecretIDKey), credentialsRequestName, awsCredsSecretIDKey),
+			veleroInstall.WithEnvFromSecretKey(strings.ToUpper(awsCredsSecretAccessKey), credentialsRequestName, awsCredsSecretAccessKey),
+			veleroInstall.WithPlugins([]string{veleroImageRegistry + "/" + veleroAwsImageTag}),
+			veleroInstall.WithImage(veleroImageRegistry+"/"+veleroImageTag),
+		)
+	case configv1.GCPPlatformType:
+		deployment = veleroInstall.Deployment(namespace,
+			veleroInstall.WithPlugins([]string{veleroImageRegistry + "/" + veleroGcpImageTag}),
+			veleroInstall.WithImage(veleroImageRegistry+"/"+veleroImageTag),
+		)
+		defaultMode := int32(420)
+		deployment.Spec.Template.Spec.Volumes = append(
+			deployment.Spec.Template.Spec.Volumes,
+			corev1.Volume{
+				Name: "cloud-credentials",
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName:  credentialsRequestName,
+						DefaultMode: &defaultMode,
+					},
+				},
+			},
+		)
+
+		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(
+			deployment.Spec.Template.Spec.Containers[0].VolumeMounts,
+			corev1.VolumeMount{
+				Name:      "cloud-credentials",
+				MountPath: "/credentials",
+			},
+		)
+
+		deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, []corev1.EnvVar{
+			{
+				Name:  "GOOGLE_APPLICATION_CREDENTIALS",
+				Value: "/credentials/service_account.json",
+			},
+		}...)
+	}
 
 	replicas := int32(1)
 	terminationGracePeriodSeconds := int64(30)
@@ -400,20 +497,21 @@ func metricsServiceFromDeployment(deployment *appsv1.Deployment) *corev1.Service
 			Labels:    map[string]string{"name": deployment.ObjectMeta.Name},
 		},
 		Spec: corev1.ServiceSpec{
-			Ports:    servicePorts,
-			Selector: serviceSelector,
-			Type:     corev1.ServiceTypeClusterIP,
+			Ports:           servicePorts,
+			Selector:        serviceSelector,
+			Type:            corev1.ServiceTypeClusterIP,
+			SessionAffinity: corev1.ServiceAffinityNone,
 		},
 	}
 }
 
-func determineVeleroImageRegistry(region string) string {
-	cnRegion := []string{"cn-north-1", "cn-northwest-1"}
-
-	// Use the image in Chinese mirror if running on AWS China
-	for _, v := range cnRegion {
-		if region == v {
-			return veleroImageRegistryCN
+func determineVeleroImageRegistry(platform configv1.PlatformType, region string) string {
+	if platform == configv1.AWSPlatformType {
+		// Use the image in Chinese mirror if running on AWS China
+		for _, v := range awsChinaRegions {
+			if region == v {
+				return veleroImageRegistryCN
+			}
 		}
 	}
 

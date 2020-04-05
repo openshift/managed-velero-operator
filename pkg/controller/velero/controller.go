@@ -141,13 +141,14 @@ func (r *ReconcileVelero) Reconcile(request reconcile.Request) (reconcile.Result
 		return reconcile.Result{}, fmt.Errorf("unable to determine AWS region")
 	}
 
-	//get a driver
+	// Create the Storage Driver
 	drv := storage.NewDriver(infraStatus, r.client)
 
 	// Check if bucket needs to be reconciled
 	if instance.StorageBucketReconcileRequired(s3ReconcilePeriod) {
-		//Create Storage
-		return reconcile.Result{Requeue: true}, drv.CreateStorage(reqLogger, instance)
+		// Create storage using the storage driver
+		// Always return from this, as we will either be updating the status *or* there will be an error.
+		return reconcile.Result{}, drv.CreateStorage(reqLogger, instance)
 	}
 
 	// Now go provision Velero

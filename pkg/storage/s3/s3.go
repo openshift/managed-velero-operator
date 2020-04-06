@@ -8,22 +8,19 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/s3"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
 	configv1 "github.com/openshift/api/config/v1"
 	veleroInstallCR "github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2"
+	storageConstants "github.com/openshift/managed-velero-operator/pkg/storage/constants"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-const (
-	bucketPrefix                 = "managed-velero-backups-"
-	defaultBackupStorageLocation = "default"
-)
-
 type S3 struct {
-	Region string
+	Region    string
+	InfraName string
 }
 
 type driver struct {
@@ -36,15 +33,18 @@ type driver struct {
 // Used during bootstrapping
 func NewDriver(ctx context.Context, cfg *configv1.InfrastructureStatus, clnt client.Client) *driver {
 	return &driver{
-		Context:    ctx,
-		Config:     &S3{Region: cfg.PlatformStatus.AWS.Region},
+		Context: ctx,
+		Config: &S3{
+			Region:    cfg.PlatformStatus.AWS.Region,
+			InfraName: cfg.InfrastructureName,
+		},
 		kubeClient: clnt,
 	}
 }
 
 // CreateStorage attempts to create an s3 bucket
 // and apply any provided tags
-func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.VeleroInstall, infraName string) error {
+func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.VeleroInstall) error {
 
 	var err error
 
@@ -73,7 +73,7 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.
 			return err
 		}
 
-		existingBucket := FindMatchingTags(bucketinfo, infraName)
+		existingBucket := FindMatchingTags(bucketinfo, d.Config.InfraName)
 		if existingBucket != "" {
 			bucketLog.Info("Recovered existing bucket", "StorageBucket.Name", existingBucket)
 			instance.Status.StorageBucket.Name = existingBucket
@@ -82,7 +82,7 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.
 		}
 
 		// Prepare to create a new bucket, if none exist.
-		proposedName := generateBucketName(bucketPrefix)
+		proposedName := generateBucketName(storageConstants.StorageBucketPrefix)
 		proposedBucketExists, err := d.StorageExists(proposedName)
 		if err != nil {
 			return err
@@ -119,7 +119,7 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.
 				return fmt.Errorf("error occurred when creating bucket %v: %v", instance.Status.StorageBucket.Name, err.Error())
 			}
 		}
-		err = TagBucket(s3Client, instance.Status.StorageBucket.Name, defaultBackupStorageLocation, infraName)
+		err = TagBucket(s3Client, instance.Status.StorageBucket.Name, storageConstants.DefaultVeleroBackupStorageLocation, d.Config.InfraName)
 		if err != nil {
 			return fmt.Errorf("error occurred when tagging bucket %v: %v", instance.Status.StorageBucket.Name, err.Error())
 		}
@@ -172,13 +172,13 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.
 
 	// Make sure that tags are applied to buckets
 	bucketLog.Info("Enforcing S3 Bucket tags on S3 Bucket")
-	err = TagBucket(s3Client, instance.Status.StorageBucket.Name, defaultBackupStorageLocation, infraName)
+	err = TagBucket(s3Client, instance.Status.StorageBucket.Name, storageConstants.DefaultVeleroBackupStorageLocation, d.Config.InfraName)
 	if err != nil {
 		return fmt.Errorf("error occurred when tagging bucket %v: %v", instance.Status.StorageBucket.Name, err.Error())
 	}
 
 	instance.Status.StorageBucket.Provisioned = true
-	instance.Status.StorageBucket.LastSyncTimestamp = &v1.Time{
+	instance.Status.StorageBucket.LastSyncTimestamp = &metav1.Time{
 		Time: time.Now(),
 	}
 	return instance.StatusUpdate(reqLogger, d.kubeClient)

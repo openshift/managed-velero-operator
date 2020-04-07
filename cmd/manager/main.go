@@ -54,7 +54,10 @@ var log = logf.Log.WithName(version.OperatorName)
 const ManagedVeleroOperatorNamespace = "openshift-velero"
 
 // supportedPlatforms is the list of platform supported by the operator
-var supportedPlatforms = []configv1.PlatformType{configv1.AWSPlatformType}
+var supportedPlatforms = []configv1.PlatformType{
+	configv1.AWSPlatformType,
+	configv1.GCPPlatformType,
+}
 
 func printVersion() {
 	log.Info(fmt.Sprintf("Operator Version: %s", version.Version))

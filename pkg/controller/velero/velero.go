@@ -10,18 +10,21 @@ import (
 	storageConstants "github.com/openshift/managed-velero-operator/pkg/storage/constants"
 
 	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
+	configv1 "github.com/openshift/api/config/v1"
 	minterv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
 	velerov1 "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
-	veleroInstall "github.com/vmware-tanzu/velero/pkg/install"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	veleroInstall "github.com/vmware-tanzu/velero/pkg/install"
+
 	endpoints "github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/go-logr/logr"
-	configv1 "github.com/openshift/api/config/v1"
 	"github.com/operator-framework/operator-sdk/pkg/metrics"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -119,7 +122,7 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 
 	// Install CredentialsRequest
 	foundCr := &minterv1.CredentialsRequest{}
-	cr := &minterv1.CredentialsRequest{}
+	var cr *minterv1.CredentialsRequest
 	switch platformStatus.Type {
 	case configv1.AWSPlatformType:
 		partition, ok := endpoints.PartitionForRegion(endpoints.DefaultPartitions(), locationConfig["region"])
@@ -147,7 +150,11 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 		}
 	} else {
 		// CredentialsRequest exists, check if it's updated.
-		if !reflect.DeepEqual(foundCr.Spec, cr.Spec) {
+		crEqual, err := credentialsRequestSpecEqual(foundCr.Spec, cr.Spec)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+		if !crEqual {
 			// Specs aren't equal, update and fix.
 			reqLogger.Info("Updating CredentialsRequest", "foundCr.Spec", foundCr.Spec, "cr.Spec", cr.Spec)
 			foundCr.Spec = *cr.Spec.DeepCopy()
@@ -517,4 +524,43 @@ func determineVeleroImageRegistry(platform configv1.PlatformType, region string)
 
 	// Use global image by default
 	return veleroImageRegistry
+}
+
+func credentialsRequestSpecEqual(x, y minterv1.CredentialsRequestSpec) (bool, error) {
+	var err error
+
+	// Create new scheme for CredentialsRequest
+	credentialsRequestScheme := runtime.NewScheme()
+
+	// Add Cloud Credential apis to scheme
+	if err := minterv1.AddToScheme(credentialsRequestScheme); err != nil {
+		return false, err
+	}
+
+	// Create decoder to allow us to read CredentialsRequest API types
+	credentialsRequestDecoder := serializer.NewCodecFactory(credentialsRequestScheme).UniversalDecoder(minterv1.SchemeGroupVersion)
+
+	// Decode the ProviderSpecs for both objects
+	xps, err := runtime.Decode(credentialsRequestDecoder, x.ProviderSpec.Raw)
+	if err != nil {
+		return false, err
+	}
+	yps, err := runtime.Decode(credentialsRequestDecoder, y.ProviderSpec.Raw)
+	if err != nil {
+		return false, err
+	}
+
+	// Check ProviderSpec matches
+	if !reflect.DeepEqual(xps, yps) {
+		return false, nil
+	}
+
+	// nil out the ProviderSpec and check everyhing else matches
+	x.ProviderSpec = nil
+	y.ProviderSpec = nil
+	if !reflect.DeepEqual(x, y) {
+		return false, nil
+	}
+
+	return true, nil
 }

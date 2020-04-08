@@ -200,6 +200,7 @@ func ListBucketsInRegion(s3Client Client, region string) (*s3.ListBucketsOutput,
 	if err != nil {
 		return result, err
 	}
+	defaultRegion := "us-east-1"
 	filteredBuckets := []*s3.Bucket{}
 	for _, bucket := range result.Buckets {
 		input := &s3.GetBucketLocationInput{Bucket: bucket.Name}
@@ -207,6 +208,9 @@ func ListBucketsInRegion(s3Client Client, region string) (*s3.ListBucketsOutput,
 		if err != nil {
 			fmt.Println(err.Error())
 			return nil, err
+		}
+		if locationResult.LocationConstraint == nil {
+			locationResult.LocationConstraint = &defaultRegion
 		}
 		if *locationResult.LocationConstraint == region {
 			filteredBuckets = append(filteredBuckets, bucket)

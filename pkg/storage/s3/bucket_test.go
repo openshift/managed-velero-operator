@@ -3,6 +3,7 @@ package s3
 import (
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -60,6 +61,15 @@ func (c *mockAWSClient) HeadBucket(input *s3.HeadBucketInput) (*s3.HeadBucketOut
 	return &s3.HeadBucketOutput{}, awserr.New("NotFound", "Not Found", nil)
 }
 
+// GetBucketLocation implements the GetBucketLocation method for mockAWSClient.
+// This mocks the AWS API response of having access to a single bucket named "testBucket".
+func (c *mockAWSClient) GetBucketLocation(input *s3.GetBucketLocationInput) (*s3.GetBucketLocationOutput, error) {
+	if *input.Bucket == "testBucket" {
+		return &s3.GetBucketLocationOutput{LocationConstraint: aws.String(region)}, nil
+	}
+	return &s3.GetBucketLocationOutput{}, awserr.New("NotFound", "Not Found", nil)
+}
+
 // GetBucketTagging implements the GetBucketTagging method for mockAWSClient.
 func (c *mockAWSClient) GetBucketTagging(input *s3.GetBucketTaggingInput) (*s3.GetBucketTaggingOutput, error) {
 	if *input.Bucket == "testBucket" {
@@ -88,7 +98,15 @@ func (c *mockAWSClient) GetPublicAccessBlock(input *s3.GetPublicAccessBlockInput
 
 // ListBuckets implements the ListBuckets method for mockAWSClient.
 func (c *mockAWSClient) ListBuckets(input *s3.ListBucketsInput) (*s3.ListBucketsOutput, error) {
-	return c.s3Client.ListBuckets(input)
+	return &s3.ListBucketsOutput{
+		Buckets: []*s3.Bucket{
+			{
+				CreationDate: &time.Time{},
+				Name: aws.String("testBucket"),
+			},
+		},
+		Owner: &s3.Owner{},
+	}, nil
 }
 
 // PutBucketEncryption implements the PutBucketEncryption method for mockAWSClient.
@@ -116,7 +134,7 @@ func TestFindMatchingTags(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		bucketinfo map[string]*s3.GetBucketTaggingOutput
+		bucketinfo map[string][]*s3.Tag
 		infraName  string
 		want       string
 	}{
@@ -126,17 +144,15 @@ func TestFindMatchingTags(t *testing.T) {
 		{
 			name:      "Bucket infraName doesn't match tag.",
 			infraName: "wrongClusterName",
-			bucketinfo: map[string]*s3.GetBucketTaggingOutput{
+			bucketinfo: map[string][]*s3.Tag{
 				"bucket1": {
-					TagSet: []*s3.Tag{
-						{
-							Key:   aws.String(bucketTagBackupLocation),
-							Value: aws.String("default"),
-						},
-						{
-							Key:   aws.String(bucketTagInfraName),
-							Value: aws.String(clusterInfraName),
-						},
+					{
+						Key:   aws.String(bucketTagBackupLocation),
+						Value: aws.String("default"),
+					},
+					{
+						Key:   aws.String(bucketTagInfraName),
+						Value: aws.String(clusterInfraName),
 					},
 				},
 			},
@@ -147,17 +163,15 @@ func TestFindMatchingTags(t *testing.T) {
 		{
 			name:      "Bucket infraName matches tag.",
 			infraName: clusterInfraName,
-			bucketinfo: map[string]*s3.GetBucketTaggingOutput{
+			bucketinfo: map[string][]*s3.Tag{
 				"bucket1": {
-					TagSet: []*s3.Tag{
-						{
-							Key:   aws.String(bucketTagBackupLocation),
-							Value: aws.String("default"),
-						},
-						{
-							Key:   aws.String(bucketTagInfraName),
-							Value: aws.String(clusterInfraName),
-						},
+					{
+						Key:   aws.String(bucketTagBackupLocation),
+						Value: aws.String("default"),
+					},
+					{
+						Key:   aws.String(bucketTagInfraName),
+						Value: aws.String(clusterInfraName),
 					},
 				},
 			},
@@ -168,29 +182,25 @@ func TestFindMatchingTags(t *testing.T) {
 		{
 			name:      "Two buckets; second bucket should match.",
 			infraName: clusterInfraName,
-			bucketinfo: map[string]*s3.GetBucketTaggingOutput{
+			bucketinfo: map[string][]*s3.Tag{
 				"bucket1": {
-					TagSet: []*s3.Tag{
-						{
-							Key:   aws.String("kubernetes.io/cluster/testCluster"),
-							Value: aws.String("owned"),
-						},
-						{
-							Key:   aws.String("Name"),
-							Value: aws.String("testCluster-image-registry"),
-						},
+					{
+						Key:   aws.String("kubernetes.io/cluster/testCluster"),
+						Value: aws.String("owned"),
+					},
+					{
+						Key:   aws.String("Name"),
+						Value: aws.String("testCluster-image-registry"),
 					},
 				},
 				"bucket2": {
-					TagSet: []*s3.Tag{
-						{
-							Key:   aws.String(bucketTagBackupLocation),
-							Value: aws.String(storageConstants.DefaultVeleroBackupStorageLocation),
-						},
-						{
-							Key:   aws.String(bucketTagInfraName),
-							Value: aws.String(clusterInfraName),
-						},
+					{
+						Key:   aws.String(bucketTagBackupLocation),
+						Value: aws.String(storageConstants.DefaultVeleroBackupStorageLocation),
+					},
+					{
+						Key:   aws.String(bucketTagInfraName),
+						Value: aws.String(clusterInfraName),
 					},
 				},
 			},
@@ -288,68 +298,115 @@ func TestDoesBucketExist(t *testing.T) {
 	}
 }
 
-func TestListBucketTags(t *testing.T) {
+func TestListBucketsInRegion(t *testing.T) {
 	type args struct {
-		s3Client   Client
-		bucketlist *s3.ListBucketsOutput
+		s3Client Client
+		region   string
 	}
 	tests := []struct {
 		name    string
 		args    args
-		want    map[string]*s3.GetBucketTaggingOutput
+		want    *s3.ListBucketsOutput
 		wantErr bool
 	}{
 		{
-			name: "Ensure that bucket named 'testBucket' has expected tags",
+			name: "List buckets in the region of 'testBucket'",
 			args: args{
 				s3Client: &fakeClient,
-				bucketlist: &s3.ListBucketsOutput{
-					Buckets: []*s3.Bucket{
-						{
-							Name: aws.String("testBucket"),
-						},
-					},
-				},
+				region: region,
 			},
-			want: map[string]*s3.GetBucketTaggingOutput{
-				"testBucket": {
-					TagSet: []*s3.Tag{
-						{
-							Key:   aws.String(bucketTagBackupLocation),
-							Value: aws.String(storageConstants.DefaultVeleroBackupStorageLocation),
-						},
-						{
-							Key:   aws.String(bucketTagInfraName),
-							Value: aws.String(clusterInfraName),
-						},
+			want: &s3.ListBucketsOutput{
+				Buckets: []*s3.Bucket{
+					{
+						CreationDate: &time.Time{},
+						Name: aws.String("testBucket"),
 					},
 				},
+				Owner: &s3.Owner{},
 			},
 			wantErr: false,
 		},
 		{
-			name: "Ensure that bucket named 'nonTaggedBucket' returns empty TagSet",
+			name: "List buckets in a different region than 'testBucket'",
 			args: args{
 				s3Client: &fakeClient,
-				bucketlist: &s3.ListBucketsOutput{
-					Buckets: []*s3.Bucket{
-						{
-							Name: aws.String("nonTaggedBucket"),
-						},
-					},
-				},
+				region: "ap-northeast-1",
 			},
-			want: map[string]*s3.GetBucketTaggingOutput{
-				"nonTaggedBucket": {
-					TagSet: []*s3.Tag{},
-				},
+			want: &s3.ListBucketsOutput{
+				Buckets: []*s3.Bucket{},
+				Owner: &s3.Owner{},
 			},
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := ListBucketTags(tt.args.s3Client, tt.args.bucketlist)
+			got, err := ListBucketsInRegion(tt.args.s3Client, tt.args.region)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ListBucketsInRegion() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ListBucketsInRegion() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestListBucketTags(t *testing.T) {
+	type args struct {
+		s3Client Client
+		buckets  []*s3.Bucket
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    map[string][]*s3.Tag
+		wantErr bool
+	}{
+		{
+			name: "Ensure that bucket named 'testBucket' has expected tags",
+			args: args{
+				s3Client: &fakeClient,
+				buckets: []*s3.Bucket{
+					{
+						Name: aws.String("testBucket"),
+					},
+				},
+			},
+			want: map[string][]*s3.Tag{
+				"testBucket": []*s3.Tag{
+					{
+						Key:   aws.String(bucketTagBackupLocation),
+						Value: aws.String(storageConstants.DefaultVeleroBackupStorageLocation),
+					},
+					{
+						Key:   aws.String(bucketTagInfraName),
+						Value: aws.String(clusterInfraName),
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Ensure that bucket named 'nonTaggedBucket' returns no tags",
+			args: args{
+				s3Client: &fakeClient,
+				buckets: []*s3.Bucket{
+					{
+						Name: aws.String("nonTaggedBucket"),
+					},
+				},
+			},
+			want: map[string][]*s3.Tag{
+				"nonTaggedBucket": []*s3.Tag{},
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ListBucketTags(tt.args.s3Client, tt.args.buckets)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ListBucketTags() error = %v, wantErr %v", err, tt.wantErr)
 				return

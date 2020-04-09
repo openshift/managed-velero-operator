@@ -63,12 +63,12 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.
 
 		// Use an existing bucket, if it exists.
 		bucketLog.Info("No S3 bucket defined. Searching for existing bucket to use")
-		bucketlist, err := ListBuckets(s3Client)
+		bucketlist, err := ListBucketsInRegion(s3Client, d.Config.Region)
 		if err != nil {
 			return err
 		}
 
-		bucketinfo, err := ListBucketTags(s3Client, bucketlist)
+		bucketinfo, err := ListBucketTags(s3Client, bucketlist.Buckets)
 		if err != nil {
 			return err
 		}

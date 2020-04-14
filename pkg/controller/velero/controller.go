@@ -104,6 +104,7 @@ type ReconcileVelero struct {
 	// that reads objects from the cache and writes to the apiserver
 	client client.Client
 	scheme *runtime.Scheme
+	driver storage.Driver
 }
 
 // Reconcile reads that state of the cluster for a Velero object and makes changes based on the state read
@@ -155,13 +156,15 @@ func (r *ReconcileVelero) Reconcile(request reconcile.Request) (reconcile.Result
 	}
 
 	// Create the Storage Driver
-	drv := storage.NewDriver(infraStatus, r.client)
+	if r.driver == nil {
+		r.driver = storage.NewDriver(infraStatus, r.client)
+	}
 
 	// Check if bucket needs to be reconciled
 	if instance.StorageBucketReconcileRequired(s3ReconcilePeriod) {
 		// Create storage using the storage driver
 		// Always return from this, as we will either be updating the status *or* there will be an error.
-		return reconcile.Result{}, drv.CreateStorage(reqLogger, instance)
+		return reconcile.Result{}, r.driver.CreateStorage(reqLogger, instance)
 	}
 
 	// Now go provision Velero

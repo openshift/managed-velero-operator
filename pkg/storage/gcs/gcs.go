@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	configv1 "github.com/openshift/api/config/v1"
 	veleroInstallCR "github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2"
+	storageBase "github.com/openshift/managed-velero-operator/pkg/storage/base"
 	storageConstants "github.com/openshift/managed-velero-operator/pkg/storage/constants"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -24,23 +25,23 @@ type GCS struct {
 }
 
 type driver struct {
-	Config     *GCS
-	Context    context.Context
-	kubeClient client.Client
+	storageBase.Driver
+	Config *GCS
 }
 
 // NewDriver creates a new gcs storage driver
 // Used during bootstrapping
 func NewDriver(ctx context.Context, cfg *configv1.InfrastructureStatus, clnt client.Client) *driver {
-	return &driver{
-		Context: ctx,
+	drv := driver{
 		Config: &GCS{
 			Region:    cfg.PlatformStatus.GCP.Region,
 			Project:   cfg.PlatformStatus.GCP.ProjectID,
 			InfraName: cfg.InfrastructureName,
 		},
-		kubeClient: clnt,
 	}
+	drv.Context = ctx
+	drv.KubeClient = clnt
+	return &drv
 }
 
 // CreateStorage attempts to create a GCS bucket and apply any provided tags
@@ -48,7 +49,7 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.
 	var err error
 
 	// Create a GCS client
-	gcsClient, err := NewGcsClient(d.kubeClient)
+	gcsClient, err := NewGcsClient(d.KubeClient)
 	if err != nil {
 		return err
 	}
@@ -72,7 +73,7 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.
 			bucketLog.Info("Recovered existing bucket", "StorageBucket.Name", existingBucket)
 			instance.Status.StorageBucket.Name = existingBucket
 			instance.Status.StorageBucket.Provisioned = true
-			return instance.StatusUpdate(reqLogger, d.kubeClient)
+			return instance.StatusUpdate(reqLogger, d.KubeClient)
 		}
 
 		// Prepare to create a new bucket, if none exist.
@@ -88,7 +89,7 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.
 		bucketLog.Info("Setting proposed bucket name", "StorageBucket.Name", proposedName)
 		instance.Status.StorageBucket.Name = proposedName
 		instance.Status.StorageBucket.Provisioned = false
-		return instance.StatusUpdate(reqLogger, d.kubeClient)
+		return instance.StatusUpdate(reqLogger, d.KubeClient)
 
 	// We have a bucket name, but haven't kicked off provisioning of the bucket yet
 	case instance.Status.StorageBucket.Name != "" && !instance.Status.StorageBucket.Provisioned:
@@ -111,7 +112,7 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.
 	if !exists {
 		bucketLog.Error(nil, "GCS bucket doesn't appear to exist")
 		instance.Status.StorageBucket.Provisioned = false
-		return instance.StatusUpdate(reqLogger, d.kubeClient)
+		return instance.StatusUpdate(reqLogger, d.KubeClient)
 	}
 
 	//TODO(cblecker): ACL enforcement
@@ -129,7 +130,7 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.
 	instance.Status.StorageBucket.LastSyncTimestamp = &metav1.Time{
 		Time: time.Now(),
 	}
-	return instance.StatusUpdate(reqLogger, d.kubeClient)
+	return instance.StatusUpdate(reqLogger, d.KubeClient)
 
 }
 
@@ -138,7 +139,7 @@ func (d *driver) StorageExists(bucketName string) (bool, error) {
 	var err error
 
 	//create an GCS Client
-	gcsClient, err := NewGcsClient(d.kubeClient)
+	gcsClient, err := NewGcsClient(d.KubeClient)
 	if err != nil {
 		return false, err
 	}

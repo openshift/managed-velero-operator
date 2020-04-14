@@ -33,7 +33,7 @@ GOBUILDFLAGS=-gcflags="all=-trimpath=${GOPATH}" -asmflags="all=-trimpath=${GOPAT
 CONTAINER_ENGINE=$(shell command -v podman 2>/dev/null || command -v docker 2>/dev/null)
 
 # ex, -v
-TESTOPTS :=
+TESTOPTS := -coverprofile=coverage.out -covermode=atomic -json
 
 ALLOW_DIRTY_CHECKOUT?=false
 

@@ -64,10 +64,16 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 		return reconcile.Result{}, fmt.Errorf("unable to determine platform")
 	}
 
+	provider := strings.ToLower(string(platformStatus.Type))
+
 	// Install BackupStorageLocation
 	foundBsl := &velerov1.BackupStorageLocation{}
-	bsl := veleroInstall.BackupStorageLocation(namespace, strings.ToLower(string(platformStatus.Type)), instance.Status.StorageBucket.Name, "", locationConfig)
-	if err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: storageConstants.DefaultVeleroBackupStorageLocation}, foundBsl); err != nil {
+	bsl := veleroInstall.BackupStorageLocation(namespace, provider, instance.Status.StorageBucket.Name, "", locationConfig)
+	bslName := types.NamespacedName{
+		Namespace: namespace,
+		Name:      storageConstants.DefaultVeleroBackupStorageLocation,
+	}
+	if err = r.client.Get(context.TODO(), bslName, foundBsl); err != nil {
 		if errors.IsNotFound(err) {
 			// Didn't find BackupStorageLocation
 			reqLogger.Info("Creating BackupStorageLocation")
@@ -94,8 +100,12 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 
 	// Install VolumeSnapshotLocation
 	foundVsl := &velerov1.VolumeSnapshotLocation{}
-	vsl := veleroInstall.VolumeSnapshotLocation(namespace, strings.ToLower(string(platformStatus.Type)), locationConfig)
-	if err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: "default"}, foundVsl); err != nil {
+	vsl := veleroInstall.VolumeSnapshotLocation(namespace, provider, locationConfig)
+	vslName := types.NamespacedName{
+		Namespace: namespace,
+		Name:      "default",
+	}
+	if err = r.client.Get(context.TODO(), vslName, foundVsl); err != nil {
 		if errors.IsNotFound(err) {
 			// Didn't find VolumeSnapshotLocation
 			reqLogger.Info("Creating VolumeSnapshotLocation")
@@ -135,7 +145,11 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 	default:
 		return reconcile.Result{}, fmt.Errorf("unable to determine platform")
 	}
-	if err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: credentialsRequestName}, foundCr); err != nil {
+	crName := types.NamespacedName{
+		Namespace: cr.ObjectMeta.Namespace,
+		Name:      cr.ObjectMeta.Name,
+	}
+	if err = r.client.Get(context.TODO(), crName, foundCr); err != nil {
 		if errors.IsNotFound(err) {
 			// Didn't find CredentialsRequest
 			reqLogger.Info("Creating CredentialsRequest")
@@ -167,7 +181,11 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 	// Install Deployment
 	foundDeployment := &appsv1.Deployment{}
 	deployment := veleroDeployment(namespace, platformStatus.Type, determineVeleroImageRegistry(platformStatus.Type, locationConfig["region"]))
-	if err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: "velero"}, foundDeployment); err != nil {
+	deploymentName := types.NamespacedName{
+		Namespace: namespace,
+		Name:      "velero",
+	}
+	if err = r.client.Get(context.TODO(), deploymentName, foundDeployment); err != nil {
 		if errors.IsNotFound(err) {
 			// Didn't find Deployment
 			reqLogger.Info("Creating Deployment")
@@ -364,12 +382,12 @@ func veleroDeployment(namespace string, platform configv1.PlatformType, veleroIm
 			veleroInstall.WithEnvFromSecretKey(strings.ToUpper(awsCredsSecretIDKey), credentialsRequestName, awsCredsSecretIDKey),
 			veleroInstall.WithEnvFromSecretKey(strings.ToUpper(awsCredsSecretAccessKey), credentialsRequestName, awsCredsSecretAccessKey),
 			veleroInstall.WithPlugins([]string{veleroImageRegistry + "/" + veleroAwsImageTag}),
-			veleroInstall.WithImage(veleroImageRegistry+"/"+veleroImageTag),
+			veleroInstall.WithImage(veleroImageRegistry + "/" + veleroImageTag),
 		)
 	case configv1.GCPPlatformType:
 		deployment = veleroInstall.Deployment(namespace,
 			veleroInstall.WithPlugins([]string{veleroImageRegistry + "/" + veleroGcpImageTag}),
-			veleroInstall.WithImage(veleroImageRegistry+"/"+veleroImageTag),
+			veleroInstall.WithImage(veleroImageRegistry + "/" + veleroImageTag),
 		)
 		defaultMode := int32(420)
 		deployment.Spec.Template.Spec.Volumes = append(

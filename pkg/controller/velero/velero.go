@@ -53,7 +53,7 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 	var err error
 
 	var locationConfig map[string]string
-	switch platformStatus.Type {
+	switch r.driver.GetPlatformType() {
 	case configv1.AWSPlatformType:
 		locationConfig = map[string]string{
 			"region": platformStatus.AWS.Region,
@@ -64,7 +64,7 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 		return reconcile.Result{}, fmt.Errorf("unable to determine platform")
 	}
 
-	provider := strings.ToLower(string(platformStatus.Type))
+	provider := strings.ToLower(string(r.driver.GetPlatformType()))
 
 	// Install BackupStorageLocation
 	foundBsl := &velerov1.BackupStorageLocation{}
@@ -133,7 +133,7 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 	// Install CredentialsRequest
 	foundCr := &minterv1.CredentialsRequest{}
 	var cr *minterv1.CredentialsRequest
-	switch platformStatus.Type {
+	switch r.driver.GetPlatformType() {
 	case configv1.AWSPlatformType:
 		partition, ok := endpoints.PartitionForRegion(endpoints.DefaultPartitions(), locationConfig["region"])
 		if !ok {
@@ -180,7 +180,7 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 
 	// Install Deployment
 	foundDeployment := &appsv1.Deployment{}
-	deployment := veleroDeployment(namespace, platformStatus.Type, determineVeleroImageRegistry(platformStatus.Type, locationConfig["region"]))
+	deployment := veleroDeployment(namespace, r.driver.GetPlatformType(), determineVeleroImageRegistry(r.driver.GetPlatformType(), locationConfig["region"]))
 	deploymentName := types.NamespacedName{
 		Namespace: namespace,
 		Name:      "velero",

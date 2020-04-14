@@ -44,6 +44,11 @@ func NewDriver(ctx context.Context, cfg *configv1.InfrastructureStatus, clnt cli
 	return &drv
 }
 
+// GetPlatformType returns the platform type of this driver
+func (d *driver) GetPlatformType() configv1.PlatformType {
+	return configv1.GCPPlatformType
+}
+
 // CreateStorage attempts to create a GCS bucket and apply any provided tags
 func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.VeleroInstall) error {
 	var err error

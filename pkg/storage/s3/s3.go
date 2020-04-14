@@ -43,6 +43,11 @@ func NewDriver(ctx context.Context, cfg *configv1.InfrastructureStatus, clnt cli
 	return &drv
 }
 
+// GetPlatformType returns the platform type of this driver
+func (d *driver) GetPlatformType() configv1.PlatformType {
+	return configv1.AWSPlatformType
+}
+
 // CreateStorage attempts to create an s3 bucket
 // and apply any provided tags
 func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.VeleroInstall) error {

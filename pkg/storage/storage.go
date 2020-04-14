@@ -14,6 +14,7 @@ import (
 
 //Driver interface to be satisfied by all present and future storage cloud providers
 type Driver interface {
+	GetPlatformType() configv1.PlatformType
 	CreateStorage(logr.Logger, *veleroInstallCR.VeleroInstall) error
 	StorageExists(string) (bool, error)
 }

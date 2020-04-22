@@ -206,6 +206,28 @@ func TestFindMatchingTags(t *testing.T) {
 			},
 			want: "bucket2",
 		},
+		// This tests that a bucket in the process of being deleted isn't used
+		{
+			name:      "Bucket flagged for deletion, should return empty string.",
+			infraName: clusterInfraName,
+			bucketinfo: map[string][]*s3.Tag{
+				"bucket1": {
+					{
+						Key:   aws.String(bucketTagBackupLocation),
+						Value: aws.String(storageConstants.DefaultVeleroBackupStorageLocation),
+					},
+					{
+						Key:   aws.String(bucketTagInfraName),
+						Value: aws.String(clusterInfraName),
+					},
+					{
+						Key:   aws.String(bucketTagDoNotReclaim),
+						Value: aws.String("true"),
+					},
+				},
+			},
+			want: "",
+		},
 	}
 
 	for _, tt := range tests {

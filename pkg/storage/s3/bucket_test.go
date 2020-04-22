@@ -102,7 +102,7 @@ func (c *mockAWSClient) ListBuckets(input *s3.ListBucketsInput) (*s3.ListBuckets
 		Buckets: []*s3.Bucket{
 			{
 				CreationDate: &time.Time{},
-				Name: aws.String("testBucket"),
+				Name:         aws.String("testBucket"),
 			},
 		},
 		Owner: &s3.Owner{},
@@ -335,13 +335,13 @@ func TestListBucketsInRegion(t *testing.T) {
 			name: "List buckets in the region of 'testBucket'",
 			args: args{
 				s3Client: &fakeClient,
-				region: region,
+				region:   region,
 			},
 			want: &s3.ListBucketsOutput{
 				Buckets: []*s3.Bucket{
 					{
 						CreationDate: &time.Time{},
-						Name: aws.String("testBucket"),
+						Name:         aws.String("testBucket"),
 					},
 				},
 				Owner: &s3.Owner{},
@@ -352,11 +352,11 @@ func TestListBucketsInRegion(t *testing.T) {
 			name: "List buckets in a different region than 'testBucket'",
 			args: args{
 				s3Client: &fakeClient,
-				region: "ap-northeast-1",
+				region:   "ap-northeast-1",
 			},
 			want: &s3.ListBucketsOutput{
 				Buckets: []*s3.Bucket{},
-				Owner: &s3.Owner{},
+				Owner:   &s3.Owner{},
 			},
 			wantErr: false,
 		},

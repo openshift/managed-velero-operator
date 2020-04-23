@@ -36,25 +36,25 @@ type mockAWSClient struct {
 }
 
 // CreateBucket implements the CreateBucket method for mockAWSClient.
-func (c *mockAWSClient) CreateBucket(input *s3.CreateBucketInput) (*s3.CreateBucketOutput, error) {
+func (c mockAWSClient) CreateBucket(input *s3.CreateBucketInput) (*s3.CreateBucketOutput, error) {
 	return &s3.CreateBucketOutput{
 		Location: aws.String(region),
 	}, nil
 }
 
 // DeleteBucketTagging implements the DeleteBucketTagging method for mockAWSClient.
-func (c *mockAWSClient) DeleteBucketTagging(input *s3.DeleteBucketTaggingInput) (*s3.DeleteBucketTaggingOutput, error) {
+func (c mockAWSClient) DeleteBucketTagging(input *s3.DeleteBucketTaggingInput) (*s3.DeleteBucketTaggingOutput, error) {
 	return c.s3Client.DeleteBucketTagging(input)
 }
 
 // GetAWSClientConfig returns a copy of the AWS Client Config for the mockAWSClient.
-func (c *mockAWSClient) GetAWSClientConfig() *aws.Config {
+func (c mockAWSClient) GetAWSClientConfig() *aws.Config {
 	return c.Config
 }
 
 // HeadBucket implements the HeadBucket method for mockAWSClient.
 // This mocks the AWS API response of having access to a single bucket named "testBucket".
-func (c *mockAWSClient) HeadBucket(input *s3.HeadBucketInput) (*s3.HeadBucketOutput, error) {
+func (c mockAWSClient) HeadBucket(input *s3.HeadBucketInput) (*s3.HeadBucketOutput, error) {
 	if *input.Bucket == "testBucket" {
 		return &s3.HeadBucketOutput{}, nil
 	}
@@ -63,7 +63,7 @@ func (c *mockAWSClient) HeadBucket(input *s3.HeadBucketInput) (*s3.HeadBucketOut
 
 // GetBucketLocation implements the GetBucketLocation method for mockAWSClient.
 // This mocks the AWS API response of having access to a single bucket named "testBucket".
-func (c *mockAWSClient) GetBucketLocation(input *s3.GetBucketLocationInput) (*s3.GetBucketLocationOutput, error) {
+func (c mockAWSClient) GetBucketLocation(input *s3.GetBucketLocationInput) (*s3.GetBucketLocationOutput, error) {
 	if *input.Bucket == "testBucket" {
 		return &s3.GetBucketLocationOutput{LocationConstraint: aws.String(region)}, nil
 	}
@@ -71,7 +71,7 @@ func (c *mockAWSClient) GetBucketLocation(input *s3.GetBucketLocationInput) (*s3
 }
 
 // GetBucketTagging implements the GetBucketTagging method for mockAWSClient.
-func (c *mockAWSClient) GetBucketTagging(input *s3.GetBucketTaggingInput) (*s3.GetBucketTaggingOutput, error) {
+func (c mockAWSClient) GetBucketTagging(input *s3.GetBucketTaggingInput) (*s3.GetBucketTaggingOutput, error) {
 	if *input.Bucket == "testBucket" {
 		return &s3.GetBucketTaggingOutput{
 			TagSet: []*s3.Tag{
@@ -92,12 +92,12 @@ func (c *mockAWSClient) GetBucketTagging(input *s3.GetBucketTaggingInput) (*s3.G
 }
 
 // GetPublicAccessBlock implements the GetPublicAccessBlock method for mockAWSClient.
-func (c *mockAWSClient) GetPublicAccessBlock(input *s3.GetPublicAccessBlockInput) (*s3.GetPublicAccessBlockOutput, error) {
+func (c mockAWSClient) GetPublicAccessBlock(input *s3.GetPublicAccessBlockInput) (*s3.GetPublicAccessBlockOutput, error) {
 	return c.s3Client.GetPublicAccessBlock(input)
 }
 
 // ListBuckets implements the ListBuckets method for mockAWSClient.
-func (c *mockAWSClient) ListBuckets(input *s3.ListBucketsInput) (*s3.ListBucketsOutput, error) {
+func (c mockAWSClient) ListBuckets(input *s3.ListBucketsInput) (*s3.ListBucketsOutput, error) {
 	return &s3.ListBucketsOutput{
 		Buckets: []*s3.Bucket{
 			{
@@ -110,23 +110,23 @@ func (c *mockAWSClient) ListBuckets(input *s3.ListBucketsInput) (*s3.ListBuckets
 }
 
 // PutBucketEncryption implements the PutBucketEncryption method for mockAWSClient.
-func (c *mockAWSClient) PutBucketEncryption(input *s3.PutBucketEncryptionInput) (*s3.PutBucketEncryptionOutput, error) {
+func (c mockAWSClient) PutBucketEncryption(input *s3.PutBucketEncryptionInput) (*s3.PutBucketEncryptionOutput, error) {
 	return c.s3Client.PutBucketEncryption(input)
 }
 
 // PutBucketLifecycleConfiguration implements the PutBucketLifecycleConfiguration method for mockAWSClient.
-func (c *mockAWSClient) PutBucketLifecycleConfiguration(
+func (c mockAWSClient) PutBucketLifecycleConfiguration(
 	input *s3.PutBucketLifecycleConfigurationInput) (*s3.PutBucketLifecycleConfigurationOutput, error) {
 	return c.s3Client.PutBucketLifecycleConfiguration(input)
 }
 
 // PutBucketTagging implements the PutBucketTagging method for mockAWSClient.
-func (c *mockAWSClient) PutBucketTagging(input *s3.PutBucketTaggingInput) (*s3.PutBucketTaggingOutput, error) {
+func (c mockAWSClient) PutBucketTagging(input *s3.PutBucketTaggingInput) (*s3.PutBucketTaggingOutput, error) {
 	return c.s3Client.PutBucketTagging(input)
 }
 
 // PutPublicAccessBlock implements the PutPublicAccessBlock method for mockAWSClient.
-func (c *mockAWSClient) PutPublicAccessBlock(input *s3.PutPublicAccessBlockInput) (*s3.PutPublicAccessBlockOutput, error) {
+func (c mockAWSClient) PutPublicAccessBlock(input *s3.PutPublicAccessBlockInput) (*s3.PutPublicAccessBlockOutput, error) {
 	return c.s3Client.PutPublicAccessBlock(input)
 }
 

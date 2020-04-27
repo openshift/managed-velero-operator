@@ -23,16 +23,40 @@ var awsConfig = &aws.Config{Region: aws.String(region)}
 
 var s, _ = session.NewSession(awsConfig)
 
-// Create a fake AWS client for mocking API responses.
-var fakeClient = mockAWSClient{
-	s3Client: s3.New(s),
-	Config:   awsConfig,
+// define the lists of buckets the fake clients should present
+var validBuckets = []*s3.Bucket{
+	{
+		CreationDate: &time.Time{},
+		Name:         aws.String("testBucket"),
+	},
 }
+
+var inconsistentBuckets = []*s3.Bucket{
+	{
+		CreationDate: &time.Time{},
+		Name:         aws.String("inconsistentBucket"),
+	},
+}
+
+// Create a fake AWS client for mocking API responses.
+func newMockAWSClient(buckets []*s3.Bucket) mockAWSClient {
+	return mockAWSClient{
+		s3Client:    s3.New(s),
+		Config:      awsConfig,
+		Buckets:     buckets,
+		BucketsTags: make(map[string]*s3.Tagging),
+	}
+}
+
+var fakeClient = newMockAWSClient(validBuckets)
+var fakeInconsistentClient = newMockAWSClient(inconsistentBuckets)
 
 // mockAWSClient implements the Client interface.
 type mockAWSClient struct {
-	s3Client s3iface.S3API
-	Config   *aws.Config
+	s3Client    s3iface.S3API
+	Config      *aws.Config
+	Buckets     []*s3.Bucket
+	BucketsTags map[string]*s3.Tagging
 }
 
 // CreateBucket implements the CreateBucket method for mockAWSClient.
@@ -54,6 +78,8 @@ func (c mockAWSClient) GetAWSClientConfig() *aws.Config {
 
 // HeadBucket implements the HeadBucket method for mockAWSClient.
 // This mocks the AWS API response of having access to a single bucket named "testBucket".
+// NOTE "inconsistentBucket" is intentionally not recognized, in order to test how the
+// operator handles buckets tagged for velero but aren't available (being deleted, etc)
 func (c mockAWSClient) HeadBucket(input *s3.HeadBucketInput) (*s3.HeadBucketOutput, error) {
 	if *input.Bucket == "testBucket" {
 		return &s3.HeadBucketOutput{}, nil
@@ -64,7 +90,7 @@ func (c mockAWSClient) HeadBucket(input *s3.HeadBucketInput) (*s3.HeadBucketOutp
 // GetBucketLocation implements the GetBucketLocation method for mockAWSClient.
 // This mocks the AWS API response of having access to a single bucket named "testBucket".
 func (c mockAWSClient) GetBucketLocation(input *s3.GetBucketLocationInput) (*s3.GetBucketLocationOutput, error) {
-	if *input.Bucket == "testBucket" {
+	if *input.Bucket == "testBucket" || *input.Bucket == "inconsistentBucket" {
 		return &s3.GetBucketLocationOutput{LocationConstraint: aws.String(region)}, nil
 	}
 	return &s3.GetBucketLocationOutput{}, awserr.New("NotFound", "Not Found", nil)
@@ -72,7 +98,7 @@ func (c mockAWSClient) GetBucketLocation(input *s3.GetBucketLocationInput) (*s3.
 
 // GetBucketTagging implements the GetBucketTagging method for mockAWSClient.
 func (c mockAWSClient) GetBucketTagging(input *s3.GetBucketTaggingInput) (*s3.GetBucketTaggingOutput, error) {
-	if *input.Bucket == "testBucket" {
+	if *input.Bucket == "testBucket" || *input.Bucket == "inconsistentBucket" {
 		return &s3.GetBucketTaggingOutput{
 			TagSet: []*s3.Tag{
 				{
@@ -99,13 +125,8 @@ func (c mockAWSClient) GetPublicAccessBlock(input *s3.GetPublicAccessBlockInput)
 // ListBuckets implements the ListBuckets method for mockAWSClient.
 func (c mockAWSClient) ListBuckets(input *s3.ListBucketsInput) (*s3.ListBucketsOutput, error) {
 	return &s3.ListBucketsOutput{
-		Buckets: []*s3.Bucket{
-			{
-				CreationDate: &time.Time{},
-				Name:         aws.String("testBucket"),
-			},
-		},
-		Owner: &s3.Owner{},
+		Buckets: c.Buckets,
+		Owner:   &s3.Owner{},
 	}, nil
 }
 
@@ -122,7 +143,8 @@ func (c mockAWSClient) PutBucketLifecycleConfiguration(
 
 // PutBucketTagging implements the PutBucketTagging method for mockAWSClient.
 func (c mockAWSClient) PutBucketTagging(input *s3.PutBucketTaggingInput) (*s3.PutBucketTaggingOutput, error) {
-	return c.s3Client.PutBucketTagging(input)
+	c.BucketsTags[*input.Bucket] = input.Tagging
+	return &s3.PutBucketTaggingOutput{}, nil
 }
 
 // PutPublicAccessBlock implements the PutPublicAccessBlock method for mockAWSClient.
@@ -437,5 +459,12 @@ func TestListBucketTags(t *testing.T) {
 				t.Errorf("ListBucketTags() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestTagBucketDoNotReclaim(t *testing.T) {
+	err := TagBucketDoNotReclaim(fakeInconsistentClient, "inconsistentBucket")
+	if err != nil {
+		t.Fatalf("got unexpected error: %s", err)
 	}
 }

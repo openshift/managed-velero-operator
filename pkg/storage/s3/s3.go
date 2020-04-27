@@ -211,16 +211,28 @@ func setInstanceBucketName(d *driver, s3Client Client, reqLogger logr.Logger, in
 
 	existingBucket := FindMatchingTags(bucketinfo, d.Config.InfraName)
 	if existingBucket != "" {
-		// TODO HEAD the bucket. if it returns ~404 then label it as do-not-recover
-		bucketLog.Info("Recovered existing bucket", "StorageBucket.Name", existingBucket)
-		instance.Status.StorageBucket.Name = existingBucket
-		instance.Status.StorageBucket.Provisioned = true
-		return instance.StatusUpdate(reqLogger, d.kubeClient)
+		// HEAD the bucket. if it returns ~404 then label it as do-not-recover
+		// because it's being deleted but isn't yet consistent
+		bucketExists, err := DoesBucketExist(s3Client, existingBucket)
+		if err != nil {
+			return err
+		}
+
+		if bucketExists == true {
+			bucketLog.Info("Recovered existing bucket", "StorageBucket.Name", existingBucket)
+			instance.Status.StorageBucket.Name = existingBucket
+			instance.Status.StorageBucket.Provisioned = true
+			return instance.StatusUpdate(reqLogger, d.kubeClient)
+		} else {
+			bucketLog.Info("Existing bucket is unavailable, labeling it do-not-reclaim", "StorageBucket.Name", existingBucket)
+			TagBucketDoNotReclaim(s3Client, existingBucket)
+			return nil
+		}
 	}
 
 	// Prepare to create a new bucket, if none exist.
 	proposedName := generateBucketName(storageConstants.StorageBucketPrefix)
-	proposedBucketExists, err := d.StorageExists(proposedName)
+	proposedBucketExists, err := DoesBucketExist(s3Client, proposedName)
 	if err != nil {
 		return err
 	}

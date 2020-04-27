@@ -184,6 +184,26 @@ func TagBucket(s3Client Client, bucketName string, backUpLocation string, infraN
 	return nil
 }
 
+/*
+TagBucketDoNotReclaim adds tags to an S3 bucket which indicate it should be
+ignored when looking for an existing bucket to reclaim
+
+Parameters:
+s3Client: a Client used to communicate with AWS S3
+bucketName: a string used to identify the bucket
+*/
+func TagBucketDoNotReclaim(s3Client Client, bucketName string) error {
+	input := CreateBucketTaggingInput(bucketName, map[string]string{
+		bucketTagDoNotReclaim: "true",
+	})
+
+	_, err := s3Client.PutBucketTagging(input)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // ListBuckets lists all buckets in the AWS account.
 func ListBuckets(s3Client Client) (*s3.ListBucketsOutput, error) {
 	input := &s3.ListBucketsInput{}

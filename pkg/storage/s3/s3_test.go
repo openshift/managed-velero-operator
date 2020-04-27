@@ -14,19 +14,6 @@ import (
 	velerov1alpha2 "github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2"
 )
 
-func TestCreateStorage(t *testing.T) {
-	t.Run("doesn't reclaim a bucket it can't access", func(t *testing.T) {
-		instance := setUpInstance(t)
-		driver := setUpDriver(t, instance)
-
-		err := driver.CreateStorage(nullLogr, instance)
-		if err != nil {
-			t.Fatalf("got an unexpected error: %s", err)
-		}
-		t.Error("still need to create the test but the code doesn't do this yet")
-	})
-}
-
 func TestSetInstanceBucketName(t *testing.T) {
 	t.Run("sets bucket name in instance status", func(t *testing.T) {
 		instance := setUpInstance(t)

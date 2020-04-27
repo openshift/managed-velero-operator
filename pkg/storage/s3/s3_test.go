@@ -15,7 +15,7 @@ import (
 )
 
 func TestSetInstanceBucketName(t *testing.T) {
-	t.Run("sets bucket name in instance status", func(t *testing.T) {
+	t.Run("sets existing bucket name in instance status", func(t *testing.T) {
 		instance := setUpInstance(t)
 		testDriver := setUpDriver(t, instance)
 

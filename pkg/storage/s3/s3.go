@@ -60,7 +60,10 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.
 	switch {
 	// We don't yet have a bucket name selected
 	case instance.Status.StorageBucket.Name == "":
-		setInstanceBucketName(d, s3Client, reqLogger, instance)
+		err = setInstanceBucketName(d, s3Client, reqLogger, instance)
+		if err != nil {
+			return err
+		}
 
 	// We have a bucket name, but haven't kicked off provisioning of the bucket yet
 	case instance.Status.StorageBucket.Name != "" && !instance.Status.StorageBucket.Provisioned:

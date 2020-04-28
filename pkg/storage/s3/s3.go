@@ -192,11 +192,9 @@ func generateBucketName(prefix string) string {
 	return prefix + id
 }
 
-/*
-setInstanceBucketName generates a bucket name for the S3 Bucket, tests to
-confirm if the bucket is accessible and then updates the instance status
-with the name
-*/
+// setInstanceBucketName generates a bucket name for the S3 Bucket, tests to
+// confirm if the bucket is accessible and then updates the instance status
+// with the name
 func setInstanceBucketName(d *driver, s3Client Client, reqLogger logr.Logger, instance *veleroInstallCR.VeleroInstall) error {
 	bucketLog := reqLogger.WithValues("StorageBucket.Name", instance.Status.StorageBucket.Name, "StorageBucket.Region", d.Config.Region)
 

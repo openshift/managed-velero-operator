@@ -84,18 +84,10 @@ func TestSetInstanceBucketName(t *testing.T) {
 // utilities and variables
 var nullLogr = &logrTesting.NullLogger{}
 
-/*
-NB: this file shares a packages with bucket_test.go and all the mock aws client
-stuff is in there
-*/
+// NB: this file shares a packages with bucket_test.go and all the mock aws client
+// stuff is in there
 
-/*
-setUpTestClient sets up a test kube client loaded with a VeleroInstall instance
-
-Parameters:
-*testing.T - a pointer to testing.T to run the helper function
-*velerov1alpha2.VeleroInstall - a pointer to the VeleroInstall instance
-*/
+// setUpTestClient sets up a test kube client loaded with a VeleroInstall instance
 func setUpTestClient(t *testing.T, instance *velerov1alpha2.VeleroInstall) k8sClient.Client {
 	s := scheme.Scheme
 	s.AddKnownTypes(velerov1alpha2.SchemeGroupVersion, instance)
@@ -104,10 +96,8 @@ func setUpTestClient(t *testing.T, instance *velerov1alpha2.VeleroInstall) k8sCl
 	return fake.NewFakeClientWithScheme(s, objects...)
 }
 
-/*
-setUpInstance sets up a new VeleroInstall instance and returns a pointer to it.
-This is to avoid cross-contamination between tests
-*/
+// setUpInstance sets up a new VeleroInstall instance and returns a pointer to it.
+// This is to avoid cross-contamination between tests
 func setUpInstance(t *testing.T) *velerov1alpha2.VeleroInstall {
 	t.Helper()
 
@@ -125,14 +115,8 @@ func setUpInstance(t *testing.T) *velerov1alpha2.VeleroInstall {
 	}
 }
 
-/*
-setUpDriver creates a new driver and returns a pointer to it. This is to avoid
-cross-contamination between tests.
-
-Parameters:
-*testing.T - a pointer to testing.T to run the helper funciton
-*velerov1alpha2.VeleroInstall - a pointer to the VeleroInstall instance for the driver
-*/
+// setUpDriver creates a new driver and returns a pointer to it. This is to avoid
+// cross-contamination between tests.
 func setUpDriver(t *testing.T, instance *velerov1alpha2.VeleroInstall) *driver {
 	t.Helper()
 

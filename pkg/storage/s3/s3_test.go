@@ -53,29 +53,8 @@ func TestSetInstanceBucketName(t *testing.T) {
 				t.Fatalf("got an unexpected error: %s", err)
 			}
 
-			if instance.Status.StorageBucket.Name != "" {
-				t.Errorf("instance bucket name: %s, expected it to be unset", instance.Status.StorageBucket.Name)
-			}
-		})
-
-		t.Run("are labeled do-not-reclaim", func(t *testing.T) {
-			instance := setUpInstance(t)
-			testDriver := setUpDriver(t, instance)
-
-			err := setInstanceBucketName(testDriver, fakeInconsistentClient, nullLogr, instance)
-			if err != nil {
-				t.Fatalf("got an unexpected error: %s", err)
-			}
-
-			actual := ""
-			for _, tag := range fakeInconsistentClient.BucketsTags["inconsistentBucket"].TagSet {
-				if *tag.Key == bucketTagDoNotReclaim {
-					actual = *tag.Value
-				}
-			}
-
-			if actual != "true" {
-				t.Errorf("expected tag %s to be true, was %s", bucketTagDoNotReclaim, actual)
+			if instance.Status.StorageBucket.Name == "inconsistentBucket" {
+				t.Errorf("instance bucket name: %s, expected it to be a new generated name", instance.Status.StorageBucket.Name)
 			}
 		})
 	})

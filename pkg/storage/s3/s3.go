@@ -225,12 +225,7 @@ func setInstanceBucketName(d *driver, s3Client Client, reqLogger logr.Logger, in
 			instance.Status.StorageBucket.Provisioned = true
 			return instance.StatusUpdate(reqLogger, d.kubeClient)
 		} else {
-			bucketLog.Info("Existing bucket is unavailable, labeling it do-not-reclaim", "StorageBucket.Name", existingBucket)
-			err = TagBucketDoNotReclaim(s3Client, existingBucket)
-			if err != nil {
-				return err
-			}
-			return nil
+			bucketLog.Info("Existing bucket is unavailable, disregarding it.", "StorageBucket.Name", existingBucket)
 		}
 	}
 

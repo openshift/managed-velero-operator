@@ -11,7 +11,6 @@ import (
 const (
 	bucketTagBackupLocation = "velero.io/backup-location"
 	bucketTagInfraName      = "velero.io/infrastructureName"
-	bucketTagDoNotReclaim   = "velero.io/do-not-reclaim"
 )
 
 // CreateBucket creates a new S3 bucket.
@@ -184,20 +183,6 @@ func TagBucket(s3Client Client, bucketName string, backUpLocation string, infraN
 	return nil
 }
 
-// TagBucketDoNotReclaim adds tags to an S3 bucket which indicate it should be
-// ignored when looking for an existing bucket to reclaim
-func TagBucketDoNotReclaim(s3Client Client, bucketName string) error {
-	input := CreateBucketTaggingInput(bucketName, map[string]string{
-		bucketTagDoNotReclaim: "true",
-	})
-
-	_, err := s3Client.PutBucketTagging(input)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 // ListBuckets lists all buckets in the AWS account.
 func ListBuckets(s3Client Client) (*s3.ListBucketsOutput, error) {
 	input := &s3.ListBucketsInput{}
@@ -273,9 +258,6 @@ func FindMatchingTags(buckets map[string][]*s3.Tag, infraName string) string {
 	var possiblematch string
 	for bucket, tagset := range buckets {
 		for _, tag := range tagset {
-			if *tag.Key == bucketTagDoNotReclaim && *tag.Value == "true" {
-				labeledDoNotReclaim = true
-			}
 			if *tag.Key == bucketTagInfraName && *tag.Value == infraName {
 				tagMatchesCluster = true
 				possiblematch = bucket

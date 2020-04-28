@@ -98,16 +98,16 @@ func setUpInstance(t *testing.T) *velerov1alpha2.VeleroInstall {
 	t.Helper()
 
 	return &velerov1alpha2.VeleroInstall{
-		metav1.TypeMeta{
+		TypeMeta: metav1.TypeMeta{
 			Kind:       "VeleroInstall",
 			APIVersion: "managed.openshift.io/v1alpha2v1alpha2",
 		},
-		metav1.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:      "cluster",
 			Namespace: "openshift-velero",
 		},
-		velerov1alpha2.VeleroInstallSpec{},
-		velerov1alpha2.VeleroInstallStatus{},
+		Spec:   velerov1alpha2.VeleroInstallSpec{},
+		Status: velerov1alpha2.VeleroInstallStatus{},
 	}
 }
 

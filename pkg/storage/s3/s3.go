@@ -221,7 +221,7 @@ func setInstanceBucketName(d *driver, s3Client Client, reqLogger logr.Logger, in
 			return err
 		}
 
-		if bucketExists == true {
+		if bucketExists {
 			bucketLog.Info("Recovered existing bucket", "StorageBucket.Name", existingBucket)
 			instance.Status.StorageBucket.Name = existingBucket
 			instance.Status.StorageBucket.Provisioned = true

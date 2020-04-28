@@ -254,7 +254,7 @@ func ListBucketTags(s3Client Client, buckets []*s3.Bucket) (map[string][]*s3.Tag
 // any of the buckets are tagged for velero updates for the cluster.
 // If matching tags are found, the bucket name is returned.
 func FindMatchingTags(buckets map[string][]*s3.Tag, infraName string) string {
-	var tagMatchesCluster, tagMatchesVelero, labeledDoNotReclaim bool
+	var tagMatchesCluster, tagMatchesVelero bool
 	var possiblematch string
 	for bucket, tagset := range buckets {
 		for _, tag := range tagset {
@@ -266,12 +266,6 @@ func FindMatchingTags(buckets map[string][]*s3.Tag, infraName string) string {
 				tagMatchesVelero = true
 				possiblematch = bucket
 			}
-		}
-		// do not use a bucket labelled as do-not-reclaim
-		if labeledDoNotReclaim {
-			tagMatchesCluster = false
-			tagMatchesVelero = false
-			possiblematch = ""
 		}
 	}
 

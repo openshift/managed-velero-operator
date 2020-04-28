@@ -15,49 +15,53 @@ import (
 )
 
 func TestSetInstanceBucketName(t *testing.T) {
-	t.Run("sets existing bucket name in instance status", func(t *testing.T) {
-		instance := setUpInstance(t)
-		testDriver := setUpDriver(t, instance)
+	tests := []struct {
+		name            string
+		awsClient       *mockAWSClient
+		bucketName      string
+		matchBucketName bool
+	}{
+		{
+			name:            "set new bucket name in instance status",
+			awsClient:       fakeEmptyClient,
+			bucketName:      "",
+			matchBucketName: false,
+		},
+		{
+			name:            "set recovered bucket name in instance status",
+			awsClient:       fakeClient,
+			bucketName:      "testBucket",
+			matchBucketName: true,
+		},
+		{
+			name:            "don't reclaim inaccessible bucket",
+			awsClient:       fakeInconsistentClient,
+			bucketName:      "inconsistentBucket",
+			matchBucketName: false,
+		},
+	}
 
-		err := setInstanceBucketName(testDriver, fakeClient, nullLogr, instance)
-		if err != nil {
-			t.Fatalf("got an unexpected error: %s", err)
-		}
-
-		if instance.Status.StorageBucket.Name == "" {
-			t.Error("bucket name was empty in the instance")
-		}
-	})
-
-	t.Run("sets new bucket name in instance status", func(t *testing.T) {
-		instance := setUpInstance(t)
-		testDriver := setUpDriver(t, instance)
-
-		err := setInstanceBucketName(testDriver, fakeEmptyClient, nullLogr, instance)
-		if err != nil {
-			t.Fatalf("got an unexpected error: %s", err)
-		}
-
-		if instance.Status.StorageBucket.Name == "" {
-			t.Error("bucket name was empty in the instance")
-		}
-	})
-
-	t.Run("buckets it can't access", func(t *testing.T) {
-		t.Run("aren't reclaimed", func(t *testing.T) {
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 			instance := setUpInstance(t)
 			testDriver := setUpDriver(t, instance)
 
-			err := setInstanceBucketName(testDriver, fakeInconsistentClient, nullLogr, instance)
+			err := setInstanceBucketName(testDriver, tt.awsClient, nullLogr, instance)
 			if err != nil {
 				t.Fatalf("got an unexpected error: %s", err)
 			}
 
-			if instance.Status.StorageBucket.Name == "inconsistentBucket" {
-				t.Errorf("instance bucket name: %s, expected it to be a new generated name", instance.Status.StorageBucket.Name)
+			// if the instace status' bucket name doesn't match the specified bucket name but is supposed to
+			if (instance.Status.StorageBucket.Name != tt.bucketName) && tt.matchBucketName {
+				t.Errorf("setInstanceBucketName() bucket name: %s, expected %s", instance.Status.StorageBucket.Name, tt.bucketName)
+			}
+
+			// if the instance status' bucket name matches the specified bucket name but isn't supposed to
+			if (instance.Status.StorageBucket.Name == tt.bucketName) && (tt.matchBucketName == false) {
+				t.Errorf("setInstanceBucketName() bucket name: %s, didn't expect %s", instance.Status.StorageBucket.Name, tt.bucketName)
 			}
 		})
-	})
+	}
 }
 
 // utilities and variables

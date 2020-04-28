@@ -29,6 +29,20 @@ func TestSetInstanceBucketName(t *testing.T) {
 		}
 	})
 
+	t.Run("sets new bucket name in instance status", func(t *testing.T) {
+		instance := setUpInstance(t)
+		testDriver := setUpDriver(t, instance)
+
+		err := setInstanceBucketName(testDriver, fakeEmptyClient, nullLogr, instance)
+		if err != nil {
+			t.Fatalf("got an unexpected error: %s", err)
+		}
+
+		if instance.Status.StorageBucket.Name == "" {
+			t.Error("bucket name was empty in the instance")
+		}
+	})
+
 	t.Run("buckets it can't access", func(t *testing.T) {
 		t.Run("aren't reclaimed", func(t *testing.T) {
 			instance := setUpInstance(t)

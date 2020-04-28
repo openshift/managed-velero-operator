@@ -38,6 +38,8 @@ var inconsistentBuckets = []*s3.Bucket{
 	},
 }
 
+var emptyBuckets = []*s3.Bucket{}
+
 // Create a fake AWS client for mocking API responses.
 func newMockAWSClient(buckets []*s3.Bucket) mockAWSClient {
 	return mockAWSClient{
@@ -50,6 +52,7 @@ func newMockAWSClient(buckets []*s3.Bucket) mockAWSClient {
 
 var fakeClient = newMockAWSClient(validBuckets)
 var fakeInconsistentClient = newMockAWSClient(inconsistentBuckets)
+var fakeEmptyClient = newMockAWSClient(emptyBuckets)
 
 // mockAWSClient implements the Client interface.
 type mockAWSClient struct {

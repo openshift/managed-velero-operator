@@ -93,7 +93,7 @@ func (c *mockAWSClient) HeadBucket(input *s3.HeadBucketInput) (*s3.HeadBucketOut
 // GetBucketLocation implements the GetBucketLocation method for mockAWSClient.
 // This mocks the AWS API response of having access to a single bucket named "testBucket".
 func (c *mockAWSClient) GetBucketLocation(input *s3.GetBucketLocationInput) (*s3.GetBucketLocationOutput, error) {
-	if *input.Bucket == "testBucket" || *input.Bucket == "inconsistentBucket" {
+	if *input.Bucket == "testBucket" {
 		return &s3.GetBucketLocationOutput{LocationConstraint: aws.String(region)}, nil
 	}
 	return &s3.GetBucketLocationOutput{}, awserr.New("NotFound", "Not Found", nil)
@@ -101,7 +101,7 @@ func (c *mockAWSClient) GetBucketLocation(input *s3.GetBucketLocationInput) (*s3
 
 // GetBucketTagging implements the GetBucketTagging method for mockAWSClient.
 func (c *mockAWSClient) GetBucketTagging(input *s3.GetBucketTaggingInput) (*s3.GetBucketTaggingOutput, error) {
-	if *input.Bucket == "testBucket" || *input.Bucket == "inconsistentBucket" {
+	if *input.Bucket == "testBucket" {
 		return &s3.GetBucketTaggingOutput{
 			TagSet: []*s3.Tag{
 				{

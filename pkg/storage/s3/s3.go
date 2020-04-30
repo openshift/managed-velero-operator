@@ -202,7 +202,17 @@ func setInstanceBucketName(d *driver, s3Client Client, reqLogger logr.Logger, in
 	bucketLog.Info("No S3 bucket defined. Searching for existing bucket to use")
 	bucketlist, err := ListBucketsInRegion(s3Client, d.Config.Region)
 	if err != nil {
-		return err
+		// cast err to awserr.Error. if that works then check the awserror code
+		if aerr, ok := err.(awserr.Error); ok {
+			if (aerr.Code() == s3.ErrCodeNoSuchBucket) || (aerr.Code() == "NotFound") {
+				bucketLog.Info("Existing bucket is unavailable, disregarding it.")
+				return nil
+			} else {
+				return aerr
+			}
+		} else {
+			return err
+		}
 	}
 
 	bucketinfo, err := ListBucketTags(s3Client, bucketlist.Buckets)
@@ -212,21 +222,10 @@ func setInstanceBucketName(d *driver, s3Client Client, reqLogger logr.Logger, in
 
 	existingBucket := FindMatchingTags(bucketinfo, d.Config.InfraName)
 	if existingBucket != "" {
-		// HEAD the bucket. if it returns ~404 then label it as do-not-recover
-		// because it's being deleted but isn't yet consistent
-		bucketExists, err := DoesBucketExist(s3Client, existingBucket)
-		if err != nil {
-			return err
-		}
-
-		if bucketExists {
-			bucketLog.Info("Recovered existing bucket", "StorageBucket.Name", existingBucket)
-			instance.Status.StorageBucket.Name = existingBucket
-			instance.Status.StorageBucket.Provisioned = true
-			return instance.StatusUpdate(reqLogger, d.kubeClient)
-		} else {
-			bucketLog.Info("Existing bucket is unavailable, disregarding it.", "StorageBucket.Name", existingBucket)
-		}
+		bucketLog.Info("Recovered existing bucket", "StorageBucket.Name", existingBucket)
+		instance.Status.StorageBucket.Name = existingBucket
+		instance.Status.StorageBucket.Provisioned = true
+		return instance.StatusUpdate(reqLogger, d.kubeClient)
 	}
 
 	// Prepare to create a new bucket, if none exist.

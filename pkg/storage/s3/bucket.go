@@ -177,7 +177,6 @@ func TagBucket(s3Client Client, bucketName string, backUpLocation string, infraN
 	})
 	_, err = s3Client.PutBucketTagging(input)
 	if err != nil {
-		fmt.Println(err.Error())
 		return err
 	}
 	return nil
@@ -188,7 +187,6 @@ func ListBuckets(s3Client Client) (*s3.ListBucketsOutput, error) {
 	input := &s3.ListBucketsInput{}
 	result, err := s3Client.ListBuckets(input)
 	if err != nil {
-		fmt.Println(err.Error())
 		return result, err
 	}
 	return result, nil
@@ -206,7 +204,6 @@ func ListBucketsInRegion(s3Client Client, region string) (*s3.ListBucketsOutput,
 		input := &s3.GetBucketLocationInput{Bucket: bucket.Name}
 		locationResult, err := s3Client.GetBucketLocation(input)
 		if err != nil {
-			fmt.Println(err.Error())
 			return nil, err
 		}
 		if locationResult.LocationConstraint == nil {

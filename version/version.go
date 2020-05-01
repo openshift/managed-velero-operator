@@ -5,5 +5,6 @@ var (
 )
 
 const (
-	OperatorName = "managed-velero-operator"
+	OperatorName      = "managed-velero-operator"
+	OperatorNamespace = "openshift-velero"
 )

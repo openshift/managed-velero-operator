@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	logrTesting "github.com/go-logr/logr/testing"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	velerov1alpha2 "github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2"
 )
@@ -65,25 +64,6 @@ var nullLogr = &logrTesting.NullLogger{}
 
 // NB: this file shares a packages with bucket_test.go and all the mock aws client
 // stuff is in there
-
-// setUpInstance sets up a new VeleroInstall instance and returns a pointer to it.
-// This is to avoid cross-contamination between tests
-func setUpInstance(t *testing.T) *velerov1alpha2.VeleroInstall {
-	t.Helper()
-
-	return &velerov1alpha2.VeleroInstall{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "VeleroInstall",
-			APIVersion: "managed.openshift.io/v1alpha2v1alpha2",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "cluster",
-			Namespace: "openshift-velero",
-		},
-		Spec:   velerov1alpha2.VeleroInstallSpec{},
-		Status: velerov1alpha2.VeleroInstallStatus{},
-	}
-}
 
 // setUpDriver creates a new driver and returns a pointer to it. This is to avoid
 // cross-contamination between tests.

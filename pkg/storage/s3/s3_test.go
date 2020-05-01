@@ -52,7 +52,7 @@ func TestSetInstanceBucketName(t *testing.T) {
 			}
 
 			// if the instance status' bucket name matches the specified bucket name but isn't supposed to
-			if (instance.Status.StorageBucket.Name == tt.bucketName) && (tt.matchBucketName == false) {
+			if (instance.Status.StorageBucket.Name == tt.bucketName) && !tt.matchBucketName {
 				t.Errorf("setInstanceBucketName() bucket name: %s, didn't expect %s", instance.Status.StorageBucket.Name, tt.bucketName)
 			}
 		})

@@ -31,6 +31,9 @@ var validBuckets = []*s3.Bucket{
 	},
 }
 
+// NOTE "inconsistentBucket" is intentionally not recognized by the
+// mockAWSClient functions in order to test how the operator handles buckets
+// tagged for velero but aren't available (being deleted, etc)
 var inconsistentBuckets = []*s3.Bucket{
 	{
 		CreationDate: &time.Time{},
@@ -81,8 +84,6 @@ func (c *mockAWSClient) GetAWSClientConfig() *aws.Config {
 
 // HeadBucket implements the HeadBucket method for mockAWSClient.
 // This mocks the AWS API response of having access to a single bucket named "testBucket".
-// NOTE "inconsistentBucket" is intentionally not recognized, in order to test how the
-// operator handles buckets tagged for velero but aren't available (being deleted, etc)
 func (c *mockAWSClient) HeadBucket(input *s3.HeadBucketInput) (*s3.HeadBucketOutput, error) {
 	if *input.Bucket == "testBucket" {
 		return &s3.HeadBucketOutput{}, nil

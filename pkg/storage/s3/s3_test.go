@@ -6,10 +6,6 @@ import (
 
 	logrTesting "github.com/go-logr/logr/testing"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/kubernetes/scheme"
-	k8sClient "sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	velerov1alpha2 "github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2"
 )
@@ -69,15 +65,6 @@ var nullLogr = &logrTesting.NullLogger{}
 
 // NB: this file shares a packages with bucket_test.go and all the mock aws client
 // stuff is in there
-
-// setUpTestClient sets up a test kube client loaded with a VeleroInstall instance
-func setUpTestClient(t *testing.T, instance *velerov1alpha2.VeleroInstall) k8sClient.Client {
-	s := scheme.Scheme
-	s.AddKnownTypes(velerov1alpha2.SchemeGroupVersion, instance)
-	objects := []runtime.Object{instance}
-
-	return fake.NewFakeClientWithScheme(s, objects...)
-}
 
 // setUpInstance sets up a new VeleroInstall instance and returns a pointer to it.
 // This is to avoid cross-contamination between tests

@@ -204,7 +204,19 @@ func ListBucketsInRegion(s3Client Client, region string) (*s3.ListBucketsOutput,
 		input := &s3.GetBucketLocationInput{Bucket: bucket.Name}
 		locationResult, err := s3Client.GetBucketLocation(input)
 		if err != nil {
-			return nil, err
+			// cast err to awserr.Error. if that works then check the awserror code
+			if aerr, ok := err.(awserr.Error); ok {
+				if (aerr.Code() == s3.ErrCodeNoSuchBucket) || (aerr.Code() == "NotFound") {
+					// The bucket specified no longer exists (can be due to delays in AWS API), continue.
+					continue
+				} else {
+					// other AWS error that we aren't handling
+					return nil, aerr
+				}
+			} else {
+				// not an AWS error
+				return nil, err
+			}
 		}
 		if locationResult.LocationConstraint == nil {
 			locationResult.LocationConstraint = &defaultRegion

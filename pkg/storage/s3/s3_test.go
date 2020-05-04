@@ -35,8 +35,8 @@ func TestSetInstanceBucketName(t *testing.T) {
 		{
 			name:            "don't reclaim inaccessible bucket",
 			awsClient:       fakeInconsistentClient,
-			bucketName:      "inconsistentBucket",
-			matchBucketName: false,
+			bucketName:      "testBucket",
+			matchBucketName: true,
 		},
 	}
 

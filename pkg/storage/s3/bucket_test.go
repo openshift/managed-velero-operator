@@ -39,6 +39,10 @@ var inconsistentBuckets = []*s3.Bucket{
 		CreationDate: &time.Time{},
 		Name:         aws.String("inconsistentBucket"),
 	},
+	{
+		CreationDate: &time.Time{},
+		Name:         aws.String("testBucket"),
+	},
 }
 
 var emptyBuckets = []*s3.Bucket{}
@@ -363,6 +367,22 @@ func TestListBucketsInRegion(t *testing.T) {
 				Owner:   &s3.Owner{},
 			},
 			wantErr: false,
+		},
+		{
+			name: "Do not include buckets that return NotFound",
+			args: args{
+				s3Client: fakeInconsistentClient,
+				region:   region,
+			},
+			want: &s3.ListBucketsOutput{
+				Buckets: []*s3.Bucket{
+					{
+						CreationDate: &time.Time{},
+						Name:         aws.String("testBucket"),
+					},
+				},
+				Owner: &s3.Owner{},
+			},
 		},
 	}
 	for _, tt := range tests {

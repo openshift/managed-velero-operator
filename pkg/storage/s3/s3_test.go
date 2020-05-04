@@ -2,14 +2,18 @@ package s3
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	logrTesting "github.com/go-logr/logr/testing"
 
 	velerov1alpha2 "github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2"
+	"github.com/openshift/managed-velero-operator/pkg/storage/constants"
 )
 
 func TestSetInstanceBucketName(t *testing.T) {
+	// when matchBucketName is false, the tests fail if the instance's
+	// Status.StorageBucket.Name matches the bucketname specified in the test case
 	tests := []struct {
 		name            string
 		awsClient       *mockAWSClient
@@ -54,6 +58,11 @@ func TestSetInstanceBucketName(t *testing.T) {
 			// if the instance status' bucket name matches the specified bucket name but isn't supposed to
 			if (instance.Status.StorageBucket.Name == tt.bucketName) && !tt.matchBucketName {
 				t.Errorf("setInstanceBucketName() bucket name: %s, didn't expect %s", instance.Status.StorageBucket.Name, tt.bucketName)
+			}
+
+			// if the instance status' bucket name doesn't have the expected prefix
+			if (!strings.HasPrefix(instance.Status.StorageBucket.Name, constants.StorageBucketPrefix)) && !tt.matchBucketName {
+				t.Errorf("setInstanceBucketName() bucket name: %s, didn't have prefix %s", instance.Status.StorageBucket.Name, constants.StorageBucketPrefix)
 			}
 		})
 	}

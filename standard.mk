@@ -33,7 +33,7 @@ GOBUILDFLAGS=-gcflags="all=-trimpath=${GOPATH}" -asmflags="all=-trimpath=${GOPAT
 CONTAINER_ENGINE=$(shell command -v podman 2>/dev/null || command -v docker 2>/dev/null)
 
 # ex, -v
-TESTOPTS := -coverprofile=coverage.out -covermode=atomic -json
+TESTOPTS :=
 
 ALLOW_DIRTY_CHECKOUT?=false
 
@@ -67,7 +67,11 @@ gobuild: ## Build binary
 
 .PHONY: gotest
 gotest:
-	go test $(TESTOPTS) $(shell go list -mod=readonly -e ./... | egrep -v "/(vendor)/")
+	go test $(TESTOPTS) ./...
+
+.PHONY: coverage
+coverage:
+	hack/codecov.sh
 
 .PHONY: envtest
 envtest: isclean

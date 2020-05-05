@@ -23,16 +23,50 @@ var awsConfig = &aws.Config{Region: aws.String(region)}
 
 var s, _ = session.NewSession(awsConfig)
 
-// Create a fake AWS client for mocking API responses.
-var fakeClient = mockAWSClient{
-	s3Client: s3.New(s),
-	Config:   awsConfig,
+// define the lists of buckets the fake clients should present
+var validBuckets = []*s3.Bucket{
+	{
+		CreationDate: &time.Time{},
+		Name:         aws.String("testBucket"),
+	},
 }
+
+// NOTE "inconsistentBucket" is intentionally not recognized by the
+// mockAWSClient functions in order to test how the operator handles buckets
+// tagged for velero but aren't available (being deleted, etc)
+var inconsistentBuckets = []*s3.Bucket{
+	{
+		CreationDate: &time.Time{},
+		Name:         aws.String("inconsistentBucket"),
+	},
+	{
+		CreationDate: &time.Time{},
+		Name:         aws.String("testBucket"),
+	},
+}
+
+var emptyBuckets = []*s3.Bucket{}
+
+// Create a fake AWS client for mocking API responses.
+func newMockAWSClient(buckets []*s3.Bucket) *mockAWSClient {
+	return &mockAWSClient{
+		s3Client:    s3.New(s),
+		Config:      awsConfig,
+		Buckets:     buckets,
+		BucketsTags: make(map[string]*s3.Tagging),
+	}
+}
+
+var fakeClient = newMockAWSClient(validBuckets)
+var fakeInconsistentClient = newMockAWSClient(inconsistentBuckets)
+var fakeEmptyClient = newMockAWSClient(emptyBuckets)
 
 // mockAWSClient implements the Client interface.
 type mockAWSClient struct {
-	s3Client s3iface.S3API
-	Config   *aws.Config
+	s3Client    s3iface.S3API
+	Config      *aws.Config
+	Buckets     []*s3.Bucket
+	BucketsTags map[string]*s3.Tagging
 }
 
 // CreateBucket implements the CreateBucket method for mockAWSClient.
@@ -99,13 +133,8 @@ func (c *mockAWSClient) GetPublicAccessBlock(input *s3.GetPublicAccessBlockInput
 // ListBuckets implements the ListBuckets method for mockAWSClient.
 func (c *mockAWSClient) ListBuckets(input *s3.ListBucketsInput) (*s3.ListBucketsOutput, error) {
 	return &s3.ListBucketsOutput{
-		Buckets: []*s3.Bucket{
-			{
-				CreationDate: &time.Time{},
-				Name: aws.String("testBucket"),
-			},
-		},
-		Owner: &s3.Owner{},
+		Buckets: c.Buckets,
+		Owner:   &s3.Owner{},
 	}, nil
 }
 
@@ -122,7 +151,8 @@ func (c *mockAWSClient) PutBucketLifecycleConfiguration(
 
 // PutBucketTagging implements the PutBucketTagging method for mockAWSClient.
 func (c *mockAWSClient) PutBucketTagging(input *s3.PutBucketTaggingInput) (*s3.PutBucketTaggingOutput, error) {
-	return c.s3Client.PutBucketTagging(input)
+	c.BucketsTags[*input.Bucket] = input.Tagging
+	return &s3.PutBucketTaggingOutput{}, nil
 }
 
 // PutPublicAccessBlock implements the PutPublicAccessBlock method for mockAWSClient.
@@ -231,7 +261,7 @@ func TestCreateBucket(t *testing.T) {
 		{
 			name: "Create a bucket named 'testBucket'",
 			args: args{
-				s3Client:   &fakeClient,
+				s3Client:   fakeClient,
 				bucketName: "testBucket",
 			},
 			wantErr: false,
@@ -239,7 +269,7 @@ func TestCreateBucket(t *testing.T) {
 		{
 			name: "Create a bucket with an empty name",
 			args: args{
-				s3Client:   &fakeClient,
+				s3Client:   fakeClient,
 				bucketName: "",
 			},
 			wantErr: true,
@@ -268,7 +298,7 @@ func TestDoesBucketExist(t *testing.T) {
 		{
 			name: "Ensure that bucket named 'testBucket' exists",
 			args: args{
-				s3Client:   &fakeClient,
+				s3Client:   fakeClient,
 				bucketName: "testBucket",
 			},
 			want:    true,
@@ -277,7 +307,7 @@ func TestDoesBucketExist(t *testing.T) {
 		{
 			name: "Ensure that bucket named 'nonExistentBucket' does not exist",
 			args: args{
-				s3Client:   &fakeClient,
+				s3Client:   fakeClient,
 				bucketName: "nonExistentBucket",
 			},
 			want:    false,
@@ -312,14 +342,14 @@ func TestListBucketsInRegion(t *testing.T) {
 		{
 			name: "List buckets in the region of 'testBucket'",
 			args: args{
-				s3Client: &fakeClient,
-				region: region,
+				s3Client: fakeClient,
+				region:   region,
 			},
 			want: &s3.ListBucketsOutput{
 				Buckets: []*s3.Bucket{
 					{
 						CreationDate: &time.Time{},
-						Name: aws.String("testBucket"),
+						Name:         aws.String("testBucket"),
 					},
 				},
 				Owner: &s3.Owner{},
@@ -329,14 +359,30 @@ func TestListBucketsInRegion(t *testing.T) {
 		{
 			name: "List buckets in a different region than 'testBucket'",
 			args: args{
-				s3Client: &fakeClient,
-				region: "ap-northeast-1",
+				s3Client: fakeClient,
+				region:   "ap-northeast-1",
 			},
 			want: &s3.ListBucketsOutput{
 				Buckets: []*s3.Bucket{},
-				Owner: &s3.Owner{},
+				Owner:   &s3.Owner{},
 			},
 			wantErr: false,
+		},
+		{
+			name: "Do not include buckets that return NotFound",
+			args: args{
+				s3Client: fakeInconsistentClient,
+				region:   region,
+			},
+			want: &s3.ListBucketsOutput{
+				Buckets: []*s3.Bucket{
+					{
+						CreationDate: &time.Time{},
+						Name:         aws.String("testBucket"),
+					},
+				},
+				Owner: &s3.Owner{},
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -367,7 +413,7 @@ func TestListBucketTags(t *testing.T) {
 		{
 			name: "Ensure that bucket named 'testBucket' has expected tags",
 			args: args{
-				s3Client: &fakeClient,
+				s3Client: fakeClient,
 				buckets: []*s3.Bucket{
 					{
 						Name: aws.String("testBucket"),
@@ -391,7 +437,7 @@ func TestListBucketTags(t *testing.T) {
 		{
 			name: "Ensure that bucket named 'nonTaggedBucket' returns no tags",
 			args: args{
-				s3Client: &fakeClient,
+				s3Client: fakeClient,
 				buckets: []*s3.Bucket{
 					{
 						Name: aws.String("nonTaggedBucket"),

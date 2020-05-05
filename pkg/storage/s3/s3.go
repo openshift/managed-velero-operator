@@ -60,41 +60,10 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.
 	switch {
 	// We don't yet have a bucket name selected
 	case instance.Status.StorageBucket.Name == "":
-
-		// Use an existing bucket, if it exists.
-		bucketLog.Info("No S3 bucket defined. Searching for existing bucket to use")
-		bucketlist, err := ListBucketsInRegion(s3Client, d.Config.Region)
+		err = setInstanceBucketName(d, s3Client, reqLogger, instance)
 		if err != nil {
 			return err
 		}
-
-		bucketinfo, err := ListBucketTags(s3Client, bucketlist.Buckets)
-		if err != nil {
-			return err
-		}
-
-		existingBucket := FindMatchingTags(bucketinfo, d.Config.InfraName)
-		if existingBucket != "" {
-			bucketLog.Info("Recovered existing bucket", "StorageBucket.Name", existingBucket)
-			instance.Status.StorageBucket.Name = existingBucket
-			instance.Status.StorageBucket.Provisioned = true
-			return instance.StatusUpdate(reqLogger, d.kubeClient)
-		}
-
-		// Prepare to create a new bucket, if none exist.
-		proposedName := generateBucketName(storageConstants.StorageBucketPrefix)
-		proposedBucketExists, err := d.StorageExists(proposedName)
-		if err != nil {
-			return err
-		}
-		if proposedBucketExists {
-			return fmt.Errorf("proposed bucket %s already exists, retrying", proposedName)
-		}
-
-		bucketLog.Info("Setting proposed bucket name", "StorageBucket.Name", proposedName)
-		instance.Status.StorageBucket.Name = proposedName
-		instance.Status.StorageBucket.Provisioned = false
-		return instance.StatusUpdate(reqLogger, d.kubeClient)
 
 	// We have a bucket name, but haven't kicked off provisioning of the bucket yet
 	case instance.Status.StorageBucket.Name != "" && !instance.Status.StorageBucket.Provisioned:
@@ -221,4 +190,46 @@ func (d *driver) StorageExists(bucketName string) (bool, error) {
 func generateBucketName(prefix string) string {
 	id := uuid.New().String()
 	return prefix + id
+}
+
+// setInstanceBucketName generates a bucket name for the S3 Bucket, tests to
+// confirm if the bucket is accessible and then updates the instance status
+// with the name
+func setInstanceBucketName(d *driver, s3Client Client, reqLogger logr.Logger, instance *veleroInstallCR.VeleroInstall) error {
+	bucketLog := reqLogger.WithValues("StorageBucket.Name", instance.Status.StorageBucket.Name, "StorageBucket.Region", d.Config.Region)
+
+	// Use an existing bucket, if it exists.
+	bucketLog.Info("No S3 bucket defined. Searching for existing bucket to use")
+	bucketlist, err := ListBucketsInRegion(s3Client, d.Config.Region)
+	if err != nil {
+		return err
+	}
+
+	bucketinfo, err := ListBucketTags(s3Client, bucketlist.Buckets)
+	if err != nil {
+		return err
+	}
+
+	existingBucket := FindMatchingTags(bucketinfo, d.Config.InfraName)
+	if existingBucket != "" {
+		bucketLog.Info("Recovered existing bucket", "StorageBucket.Name", existingBucket)
+		instance.Status.StorageBucket.Name = existingBucket
+		instance.Status.StorageBucket.Provisioned = true
+		return instance.StatusUpdate(reqLogger, d.kubeClient)
+	}
+
+	// Prepare to create a new bucket, if none exist.
+	proposedName := generateBucketName(storageConstants.StorageBucketPrefix)
+	proposedBucketExists, err := DoesBucketExist(s3Client, proposedName)
+	if err != nil {
+		return err
+	}
+	if proposedBucketExists {
+		return fmt.Errorf("proposed bucket %s already exists, retrying", proposedName)
+	}
+
+	bucketLog.Info("Setting proposed bucket name", "StorageBucket.Name", proposedName)
+	instance.Status.StorageBucket.Name = proposedName
+	instance.Status.StorageBucket.Provisioned = false
+	return instance.StatusUpdate(reqLogger, d.kubeClient)
 }

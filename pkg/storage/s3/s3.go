@@ -202,17 +202,7 @@ func setInstanceBucketName(d *driver, s3Client Client, reqLogger logr.Logger, in
 	bucketLog.Info("No S3 bucket defined. Searching for existing bucket to use")
 	bucketlist, err := ListBucketsInRegion(s3Client, d.Config.Region)
 	if err != nil {
-		// cast err to awserr.Error. if that works then check the awserror code
-		if aerr, ok := err.(awserr.Error); ok {
-			if (aerr.Code() == s3.ErrCodeNoSuchBucket) || (aerr.Code() == "NotFound") {
-				bucketLog.Info("Existing bucket is unavailable, disregarding it.")
-				return nil
-			} else {
-				return aerr
-			}
-		} else {
-			return err
-		}
+		return err
 	}
 
 	bucketinfo, err := ListBucketTags(s3Client, bucketlist.Buckets)

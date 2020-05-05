@@ -6,9 +6,9 @@ set -o pipefail
 
 REPO_ROOT=$(git rev-parse --show-toplevel)
 
-make -C ${REPO_ROOT} gotest
+make -C ${REPO_ROOT} gotest TESTOPTS="-coverprofile=coverage.out -covermode=atomic"
 
-CI_SERVER_URL=https://openshift-gce-devel.appspot.com/build/origin-ci-test
+CI_SERVER_URL=https://prow.svc.ci.openshift.org/view/gcs/origin-ci-test
 
 # Configure the git refs and job link based on how the job was triggered via prow
 if [[ "$JOB_TYPE" == "presubmit" ]]; then
@@ -29,4 +29,4 @@ export CI_BUILD_URL=${JOB_LINK}
 export CI_BUILD_ID=${JOB_NAME}
 export CI_JOB_ID=${BUILD_ID}
 
-bash <(curl -s https://codecov.io/bash) -Z -f coverage.out -r ${REPO_OWNER}/${REPO_NAME} ${REF_FLAGS}
+bash <(curl -s https://codecov.io/bash) -Z -K -f coverage.out -r ${REPO_OWNER}/${REPO_NAME} ${REF_FLAGS}

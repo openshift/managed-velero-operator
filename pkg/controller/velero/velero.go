@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	veleroInstallCR "github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2"
-	storageConstants "github.com/openshift/managed-velero-operator/pkg/storage/constants"
 
 	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	configv1 "github.com/openshift/api/config/v1"
@@ -25,8 +24,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -69,9 +68,9 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 	// Install BackupStorageLocation
 	foundBsl := &velerov1.BackupStorageLocation{}
 	bsl := veleroInstall.BackupStorageLocation(namespace, provider, instance.Status.StorageBucket.Name, "", locationConfig)
-	bslName := types.NamespacedName{
-		Namespace: namespace,
-		Name:      storageConstants.DefaultVeleroBackupStorageLocation,
+	bslName, err := runtimeClient.ObjectKeyFromObject(bsl)
+	if err != nil {
+		return reconcile.Result{}, err
 	}
 	if err = r.client.Get(context.TODO(), bslName, foundBsl); err != nil {
 		if errors.IsNotFound(err) {
@@ -101,9 +100,9 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 	// Install VolumeSnapshotLocation
 	foundVsl := &velerov1.VolumeSnapshotLocation{}
 	vsl := veleroInstall.VolumeSnapshotLocation(namespace, provider, locationConfig)
-	vslName := types.NamespacedName{
-		Namespace: namespace,
-		Name:      "default",
+	vslName, err := runtimeClient.ObjectKeyFromObject(vsl)
+	if err != nil {
+		return reconcile.Result{}, err
 	}
 	if err = r.client.Get(context.TODO(), vslName, foundVsl); err != nil {
 		if errors.IsNotFound(err) {
@@ -145,9 +144,9 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 	default:
 		return reconcile.Result{}, fmt.Errorf("unable to determine platform")
 	}
-	crName := types.NamespacedName{
-		Namespace: cr.ObjectMeta.Namespace,
-		Name:      cr.ObjectMeta.Name,
+	crName, err := runtimeClient.ObjectKeyFromObject(cr)
+	if err != nil {
+		return reconcile.Result{}, err
 	}
 	if err = r.client.Get(context.TODO(), crName, foundCr); err != nil {
 		if errors.IsNotFound(err) {
@@ -181,9 +180,9 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 	// Install Deployment
 	foundDeployment := &appsv1.Deployment{}
 	deployment := veleroDeployment(namespace, r.driver.GetPlatformType(), determineVeleroImageRegistry(r.driver.GetPlatformType(), locationConfig["region"]))
-	deploymentName := types.NamespacedName{
-		Namespace: namespace,
-		Name:      "velero",
+	deploymentName, err := runtimeClient.ObjectKeyFromObject(deployment)
+	if err != nil {
+		return reconcile.Result{}, err
 	}
 	if err = r.client.Get(context.TODO(), deploymentName, foundDeployment); err != nil {
 		if errors.IsNotFound(err) {
@@ -213,9 +212,9 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 	// Install Metrics Service
 	foundService := &corev1.Service{}
 	service := metricsServiceFromDeployment(deployment)
-	serviceName := types.NamespacedName{
-		Namespace: service.ObjectMeta.Namespace,
-		Name:      service.ObjectMeta.Name,
+	serviceName, err := runtimeClient.ObjectKeyFromObject(cr)
+	if err != nil {
+		return reconcile.Result{}, err
 	}
 	if err = r.client.Get(context.TODO(), serviceName, foundService); err != nil {
 		if errors.IsNotFound(err) {
@@ -249,9 +248,9 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 	// Install Metrics ServiceMonitor
 	foundServiceMonitor := &monitoringv1.ServiceMonitor{}
 	serviceMonitor := metrics.GenerateServiceMonitor(foundService)
-	serviceMonitorName := types.NamespacedName{
-		Namespace: serviceMonitor.ObjectMeta.Namespace,
-		Name:      serviceMonitor.ObjectMeta.Name,
+	serviceMonitorName, err := runtimeClient.ObjectKeyFromObject(serviceMonitor)
+	if err != nil {
+		return reconcile.Result{}, err
 	}
 	if err = r.client.Get(context.TODO(), serviceMonitorName, foundServiceMonitor); err != nil {
 		if errors.IsNotFound(err) {

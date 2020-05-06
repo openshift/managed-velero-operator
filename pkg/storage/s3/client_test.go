@@ -12,7 +12,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	velerov1alpha2 "github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2"
-	"github.com/openshift/managed-velero-operator/version"
 )
 
 func TestNewS3Client(t *testing.T) {
@@ -41,11 +40,11 @@ func TestNewS3Client(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			actualClient, err := NewS3Client(tt.kubeClient, tt.region)
-			if (err != nil) && (tt.expectError == false) {
+			if (err != nil) && !tt.expectError {
 				t.Fatalf("got an unexpected error: %s\n", err)
 			}
 
-			if (tt.expectError == false) && (reflect.TypeOf(actualClient).String() != "*s3.awsClient") {
+			if !tt.expectError && (reflect.TypeOf(actualClient).String() != "*s3.awsClient") {
 				t.Errorf("expected *awsClient got %s", reflect.TypeOf(actualClient))
 			}
 		})
@@ -55,7 +54,7 @@ func TestNewS3Client(t *testing.T) {
 // utils and variables
 var testSecret = &corev1.Secret{
 	ObjectMeta: metav1.ObjectMeta{
-		Namespace: version.OperatorNamespace,
+		Namespace: "openshift-velero",
 		Name:      awsCredsSecretName,
 	},
 	Data: map[string][]byte{

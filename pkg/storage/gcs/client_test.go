@@ -26,13 +26,25 @@ func TestNewGcsClient(t *testing.T) {
 	}{
 		{
 			name:        "create a Gcs client",
-			kubeClient:  setUpTestClient(t, instance),
+			kubeClient:  setUpTestClient(t, instance, testSecret),
 			namespace:   "openshift-velero",
 			expectError: false,
 		},
 		{
 			name:        "errors without Gcs credentials secret",
-			kubeClient:  setUpUnauthedTestClient(t, instance),
+			kubeClient:  setUpEmptyTestClient(t, instance),
+			namespace:   "openshift-velero",
+			expectError: true,
+		},
+		{
+			name:        "errors with unauthed Gcs credentials secret",
+			kubeClient:  setUpTestClient(t, instance, emptySecret),
+			namespace:   "openshift-velero",
+			expectError: true,
+		},
+		{
+			name:        "errors with broken Gcs credentials secret",
+			kubeClient:  setUpTestClient(t, instance, brokenSecret),
 			namespace:   "openshift-velero",
 			expectError: true,
 		},
@@ -77,6 +89,24 @@ var testSecret = &corev1.Secret{
 	},
 }
 
+var emptySecret = &corev1.Secret{
+	ObjectMeta: metav1.ObjectMeta{
+		Namespace: "openshift-velero",
+		Name:      storageCredsSecretName,
+	},
+	Data: map[string][]byte{},
+}
+
+var brokenSecret = &corev1.Secret{
+	ObjectMeta: metav1.ObjectMeta{
+		Namespace: "openshift-velero",
+		Name:      storageCredsSecretName,
+	},
+	Data: map[string][]byte{
+		"service_account.json": []byte(" { } "),
+	},
+}
+
 // setUpInstance sets up a new VeleroInstall instance and returns a pointer to it.
 // This is to avoid cross-contamination between tests
 func setUpInstance(t *testing.T) *velerov1alpha2.VeleroInstall {
@@ -97,16 +127,17 @@ func setUpInstance(t *testing.T) *velerov1alpha2.VeleroInstall {
 }
 
 // setUpTestClient sets up a test kube client loaded with a VeleroInstall instance
-func setUpTestClient(t *testing.T, instance *velerov1alpha2.VeleroInstall) k8sClient.Client {
+// and a specified secret
+func setUpTestClient(t *testing.T, instance *velerov1alpha2.VeleroInstall, secret *corev1.Secret) k8sClient.Client {
 	s := scheme.Scheme
 	s.AddKnownTypes(velerov1alpha2.SchemeGroupVersion, instance)
-	objects := []runtime.Object{instance, testSecret}
+	objects := []runtime.Object{instance, secret}
 
 	return fake.NewFakeClientWithScheme(s, objects...)
 }
 
-// setUpUnauthedTestClient sets up a test kube client that is missing the AWS credentials secret
-func setUpUnauthedTestClient(t *testing.T, instance *velerov1alpha2.VeleroInstall) k8sClient.Client {
+// setUpEmptyTestClient sets up a test kube client that doesn't have a GCP secret
+func setUpEmptyTestClient(t *testing.T, instance *velerov1alpha2.VeleroInstall) k8sClient.Client {
 	s := scheme.Scheme
 	s.AddKnownTypes(velerov1alpha2.SchemeGroupVersion, instance)
 	objects := []runtime.Object{instance}

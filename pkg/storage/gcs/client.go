@@ -25,10 +25,6 @@ var (
 func NewGcsClient(kubeClient client.Client, namespace string) (stiface.Client, error) {
 	var err error
 
-	if err != nil {
-		return nil, fmt.Errorf("failed to get operator namespace: %v", err)
-	}
-
 	secret := &corev1.Secret{}
 	err = kubeClient.Get(context.TODO(),
 		types.NamespacedName{

@@ -13,9 +13,11 @@ require (
 )
 
 require (
+	cloud.google.com/go v0.53.0
 	cloud.google.com/go/storage v1.6.0
 	github.com/cblecker/platformutils v0.0.0-20200321191645-443abe7fea11
 	github.com/coreos/prometheus-operator v0.34.0
+	github.com/googleapis/google-cloud-go-testing v0.0.0-20191008195207-8e1d251e947d
 	github.com/operator-framework/operator-sdk v0.16.0
 	github.com/spf13/pflag v1.0.5
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d

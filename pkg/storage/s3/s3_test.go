@@ -2,14 +2,76 @@ package s3
 
 import (
 	"context"
+	"reflect"
 	"strings"
 	"testing"
 
 	logrTesting "github.com/go-logr/logr/testing"
+	configv1 "github.com/openshift/api/config/v1"
 
 	velerov1alpha2 "github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2"
 	"github.com/openshift/managed-velero-operator/pkg/storage/constants"
 )
+
+func TestNewDriver(t *testing.T) {
+	tests := []struct {
+		name      string
+		namespace string
+		region    string
+	}{
+		{
+			name:      "create an s3 driver",
+			namespace: "openshift-velero",
+			region:    "us-east-1",
+		},
+	}
+
+	expectedType := "*s3.driver"
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			kubeClient := setUpTestClient(t, setUpInstance(t))
+
+			infraStatus := &configv1.InfrastructureStatus{
+				InfrastructureName: "managed-velero-fake-cluster",
+				PlatformStatus: &configv1.PlatformStatus{
+					Type: configv1.AWSPlatformType,
+					AWS: &configv1.AWSPlatformStatus{
+						Region: "us-east-1",
+					},
+				},
+			}
+
+			actualDriver := NewDriver(context.Background(), infraStatus, kubeClient, tt.namespace)
+
+			// test that NewDriver actually returns the expected type
+			if reflect.TypeOf(actualDriver).String() != expectedType {
+				t.Fatalf("NewDriver(): expected %s got %s", expectedType, reflect.TypeOf(actualDriver))
+			}
+
+			// test that the new driver has all the expected fields
+			if reflect.TypeOf(actualDriver.Context).String() != "*context.emptyCtx" {
+				t.Errorf("NewDriver(): driver.Context expected Context got %s", reflect.TypeOf(actualDriver.Context).String())
+			}
+
+			expectedConfig := &S3{
+				Region:    infraStatus.PlatformStatus.AWS.Region,
+				InfraName: infraStatus.InfrastructureName,
+			}
+			if !reflect.DeepEqual(actualDriver.Config, expectedConfig) {
+				t.Errorf("NewDriver(): driver.Config expected %v got %v", expectedConfig, actualDriver.Config)
+			}
+
+			if actualDriver.kubeClient != kubeClient {
+				t.Errorf("NewDriver(): driver.kubeClient expected %v got %v", kubeClient, actualDriver.kubeClient)
+			}
+
+			if actualDriver.Namespace != tt.namespace {
+				t.Errorf("NewDriver(): driver.Namespace expected %s got %s", tt.namespace, actualDriver.Namespace)
+			}
+		})
+	}
+}
 
 func TestSetInstanceBucketName(t *testing.T) {
 	// when matchBucketName is false, the tests fail if the instance's

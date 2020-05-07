@@ -1,4 +1,4 @@
-package s3
+package gcs
 
 import (
 	"reflect"
@@ -14,7 +14,7 @@ import (
 	velerov1alpha2 "github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2"
 )
 
-func TestNewS3Client(t *testing.T) {
+func TestNewGcsClient(t *testing.T) {
 	instance := setUpInstance(t)
 
 	tests := []struct {
@@ -25,30 +25,29 @@ func TestNewS3Client(t *testing.T) {
 		expectError bool
 	}{
 		{
-			name:        "create an S3 client",
+			name:        "create a Gcs client",
 			kubeClient:  setUpTestClient(t, instance),
 			namespace:   "openshift-velero",
-			region:      "us-east-1",
 			expectError: false,
 		},
 		{
-			name:        "errors without S3 credentials secret",
+			name:        "errors without Gcs credentials secret",
 			kubeClient:  setUpUnauthedTestClient(t, instance),
 			namespace:   "openshift-velero",
-			region:      "us-east-1",
 			expectError: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			actualClient, err := NewS3Client(tt.kubeClient, tt.namespace, tt.region)
+			actualClient, err := NewGcsClient(tt.kubeClient, tt.namespace)
+
 			if (err != nil) && !tt.expectError {
 				t.Fatalf("got an unexpected error: %s\n", err)
 			}
 
-			if !tt.expectError && (reflect.TypeOf(actualClient).String() != "*s3.awsClient") {
-				t.Errorf("expected *awsClient got %s", reflect.TypeOf(actualClient))
+			if !tt.expectError && (reflect.TypeOf(actualClient).String() != "stiface.client") {
+				t.Errorf("expected stiface.client got %s", reflect.TypeOf(actualClient))
 			}
 		})
 	}
@@ -58,11 +57,23 @@ func TestNewS3Client(t *testing.T) {
 var testSecret = &corev1.Secret{
 	ObjectMeta: metav1.ObjectMeta{
 		Namespace: "openshift-velero",
-		Name:      awsCredsSecretName,
+		Name:      storageCredsSecretName,
 	},
 	Data: map[string][]byte{
-		awsCredsSecretIDKey:     []byte("fakeSecretIDKey"),
-		awsCredsSecretAccessKey: []byte("fakeSecretAccessKey"),
+		"service_account.json": []byte(`
+		{
+			"type": "service_account",
+			"project_id": "",
+			"private_key_id": "",
+			"private_key": "",
+			"client_email": "",
+			"client_id": "",
+			"auth_uri": "https://accounts.google.com/o/oauth2/auth",
+			"token_uri": "https://oauth2.googleapis.com/token",
+			"auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+			"client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/osd-v4-zlqlq-velero-iam--48xnl%40o-3e859ad4.iam.gserviceaccount.com"
+		}
+		`),
 	},
 }
 

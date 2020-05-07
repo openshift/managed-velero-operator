@@ -155,7 +155,7 @@ func (r *ReconcileVelero) Reconcile(request reconcile.Request) (reconcile.Result
 	}
 
 	// Create the Storage Driver
-	drv := storage.NewDriver(infraStatus, r.client)
+	drv := storage.NewDriver(infraStatus, r.client, request.Namespace)
 
 	// Check if bucket needs to be reconciled
 	if instance.StorageBucketReconcileRequired(s3ReconcilePeriod) {

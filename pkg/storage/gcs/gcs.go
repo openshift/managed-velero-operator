@@ -27,11 +27,12 @@ type driver struct {
 	Config     *GCS
 	Context    context.Context
 	kubeClient client.Client
+	Namespace  string
 }
 
 // NewDriver creates a new gcs storage driver
 // Used during bootstrapping
-func NewDriver(ctx context.Context, cfg *configv1.InfrastructureStatus, clnt client.Client) *driver {
+func NewDriver(ctx context.Context, cfg *configv1.InfrastructureStatus, clnt client.Client, namespace string) *driver {
 	return &driver{
 		Context: ctx,
 		Config: &GCS{
@@ -40,6 +41,7 @@ func NewDriver(ctx context.Context, cfg *configv1.InfrastructureStatus, clnt cli
 			InfraName: cfg.InfrastructureName,
 		},
 		kubeClient: clnt,
+		Namespace:  namespace,
 	}
 }
 
@@ -48,7 +50,7 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.
 	var err error
 
 	// Create a GCS client
-	gcsClient, err := NewGcsClient(d.kubeClient)
+	gcsClient, err := NewGcsClient(d.kubeClient, d.Namespace)
 	if err != nil {
 		return err
 	}
@@ -138,7 +140,7 @@ func (d *driver) StorageExists(bucketName string) (bool, error) {
 	var err error
 
 	//create an GCS Client
-	gcsClient, err := NewGcsClient(d.kubeClient)
+	gcsClient, err := NewGcsClient(d.kubeClient, d.Namespace)
 	if err != nil {
 		return false, err
 	}

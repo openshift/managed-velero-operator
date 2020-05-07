@@ -18,17 +18,17 @@ type Driver interface {
 }
 
 //NewDriver will return a driver object
-func NewDriver(cfg *configv1.InfrastructureStatus, clnt client.Client) Driver {
+func NewDriver(cfg *configv1.InfrastructureStatus, clnt client.Client, namespace string) Driver {
 
 	ctx := context.Background()
 	var driver Driver
 
 	if cfg.PlatformStatus.Type == "AWS" {
-		driver = s3.NewDriver(ctx, cfg, clnt)
+		driver = s3.NewDriver(ctx, cfg, clnt, namespace)
 	}
 
 	if cfg.PlatformStatus.Type == "GCP" {
-		driver = gcs.NewDriver(ctx, cfg, clnt)
+		driver = gcs.NewDriver(ctx, cfg, clnt, namespace)
 	}
 
 	return driver

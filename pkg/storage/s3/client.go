@@ -113,7 +113,7 @@ func (c *awsClient) PutPublicAccessBlock(input *s3.PutPublicAccessBlockInput) (*
 
 // NewS3Client reads the aws secrets in the operator's namespace and uses
 // them to create a new client for accessing the S3 API.
-func NewS3Client(kubeClient client.Client, region string) (Client, error) {
+func NewS3Client(kubeClient client.Client, namespace string, region string) (Client, error) {
 	var err error
 
 	awsConfig := &aws.Config{Region: aws.String(region)}
@@ -122,7 +122,7 @@ func NewS3Client(kubeClient client.Client, region string) (Client, error) {
 	err = kubeClient.Get(context.TODO(),
 		types.NamespacedName{
 			Name:      awsCredsSecretName,
-			Namespace: version.OperatorNamespace,
+			Namespace: namespace,
 		},
 		secret)
 	if err != nil {

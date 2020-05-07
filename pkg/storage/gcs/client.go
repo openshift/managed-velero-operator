@@ -6,7 +6,6 @@ import (
 
 	"github.com/googleapis/google-cloud-go-testing/storage/stiface"
 	"github.com/openshift/managed-velero-operator/version"
-	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -23,10 +22,9 @@ var (
 
 // NewGcsClient reads the gcp secrets in the operator's namespace and uses
 // them to create a new client for accessing the GCS API.
-func NewGcsClient(kubeClient client.Client) (stiface.Client, error) {
+func NewGcsClient(kubeClient client.Client, namespace string) (stiface.Client, error) {
 	var err error
 
-	namespace, err := k8sutil.GetOperatorNamespace()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get operator namespace: %v", err)
 	}

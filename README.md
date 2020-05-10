@@ -1,4 +1,9 @@
-# Managed Velero Operator
+# managed-velero-operator
+
+[![Go Report Card](https://goreportcard.com/badge/github.com/openshift/managed-velero-operator)](https://goreportcard.com/report/github.com/openshift/managed-velero-operator)
+[![GoDoc](https://godoc.org/github.com/openshift/managed-velero-operator?status.svg)](https://godoc.org/github.com/openshift/managed-velero-operator)
+[![codecov](https://codecov.io/gh/openshift/managed-velero-operator/branch/master/graph/badge.svg)](https://codecov.io/gh/openshift/managed-velero-operator)
+[![License](https://img.shields.io/:license-apache-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0.html)
 
 ## Summary
 
@@ -6,7 +11,7 @@ The Managed Velero Operator is used for backups in OpenShift Dedicated v4. It is
 
 ## What the Managed Velero Operator Does
 
-1. When the Managed Velero Operator starts, it checks whether it is installed on a supported platform. For OpenShift Dedicated v4 environment it validates that 
+1. When the Managed Velero Operator starts, it checks whether it is installed on a supported platform. For OpenShift Dedicated v4 environment it validates that
 	+ it is installed on AWS or GCP
 	+ it has been installed with installer provisioned infrastructure
 	+ it has all the needed details in the cluster's infrastructure configuration to provision Velero
@@ -22,7 +27,7 @@ The Managed Velero Operator is used for backups in OpenShift Dedicated v4. It is
 
 5. Next, the Managed Velero Operator will configure and install the Velero software. This includes ensuring that setup manifests are installed, and Velero custom resources such as the volume storage location and the backup storage location are specified. This step also provisions credentials for Velero to access the object storage bucket through the cluster credentials operator and a credentials request custom resource that is part of OpenShift v4.
 
-6. Finally, the Managed Velero Operator completes the **Reconcile loop**. 
+6. Finally, the Managed Velero Operator completes the **Reconcile loop**.
 
 The Managed Velero Operator will listen to changes in settings and custom resources and periodically run the Reconcile loop to change the settings back to what it expects.
 

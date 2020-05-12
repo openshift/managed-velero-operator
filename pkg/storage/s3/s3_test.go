@@ -79,12 +79,14 @@ var nullLogr = &logrTesting.NullLogger{}
 func setUpDriver(t *testing.T, instance *velerov1alpha2.VeleroInstall) *driver {
 	t.Helper()
 
-	return &driver{
+	drv := driver{
 		Config: &S3{
 			Region:    region,
 			InfraName: clusterInfraName,
 		},
-		Context:    context.TODO(),
-		kubeClient: setUpTestClient(t, instance),
 	}
+	drv.Context = context.TODO()
+	drv.KubeClient = setUpTestClient(t, instance)
+
+	return &drv
 }

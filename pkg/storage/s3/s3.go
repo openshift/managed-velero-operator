@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	configv1 "github.com/openshift/api/config/v1"
 	veleroInstallCR "github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2"
+	storageBase "github.com/openshift/managed-velero-operator/pkg/storage/base"
 	storageConstants "github.com/openshift/managed-velero-operator/pkg/storage/constants"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -24,22 +25,27 @@ type S3 struct {
 }
 
 type driver struct {
-	Config     *S3
-	Context    context.Context
-	kubeClient client.Client
+	storageBase.Driver
+	Config *S3
 }
 
 // NewDriver creates a new s3 storage driver
 // Used during bootstrapping
 func NewDriver(ctx context.Context, cfg *configv1.InfrastructureStatus, clnt client.Client) *driver {
-	return &driver{
-		Context: ctx,
+	drv := driver{
 		Config: &S3{
 			Region:    cfg.PlatformStatus.AWS.Region,
 			InfraName: cfg.InfrastructureName,
 		},
-		kubeClient: clnt,
 	}
+	drv.Context = ctx
+	drv.KubeClient = clnt
+	return &drv
+}
+
+// GetPlatformType returns the platform type of this driver
+func (d *driver) GetPlatformType() configv1.PlatformType {
+	return configv1.AWSPlatformType
 }
 
 // CreateStorage attempts to create an s3 bucket
@@ -49,7 +55,7 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.
 	var err error
 
 	// Create an S3 client based on the region we received
-	s3Client, err := NewS3Client(d.kubeClient, d.Config.Region)
+	s3Client, err := NewS3Client(d.KubeClient, d.Config.Region)
 	if err != nil {
 		return err
 	}
@@ -78,7 +84,7 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.
 				case s3.ErrCodeBucketAlreadyExists:
 					bucketLog.Info("Bucket exists, but is not owned by current user; retrying")
 					instance.Status.StorageBucket.Name = ""
-					return instance.StatusUpdate(reqLogger, d.kubeClient)
+					return instance.StatusUpdate(reqLogger, d.KubeClient)
 				case s3.ErrCodeBucketAlreadyOwnedByYou:
 					bucketLog.Info("Bucket exists, and is owned by current user; continue")
 				default:
@@ -106,7 +112,7 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.
 	if !exists {
 		bucketLog.Error(nil, "S3 bucket doesn't appear to exist")
 		instance.Status.StorageBucket.Provisioned = false
-		return instance.StatusUpdate(reqLogger, d.kubeClient)
+		return instance.StatusUpdate(reqLogger, d.KubeClient)
 	}
 
 	// Encrypt S3 bucket
@@ -150,7 +156,7 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.
 	instance.Status.StorageBucket.LastSyncTimestamp = &metav1.Time{
 		Time: time.Now(),
 	}
-	return instance.StatusUpdate(reqLogger, d.kubeClient)
+	return instance.StatusUpdate(reqLogger, d.KubeClient)
 
 }
 
@@ -158,7 +164,7 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.
 func (d *driver) StorageExists(bucketName string) (bool, error) {
 
 	//create an S3 Client
-	s3Client, err := NewS3Client(d.kubeClient, d.Config.Region)
+	s3Client, err := NewS3Client(d.KubeClient, d.Config.Region)
 	if err != nil {
 		return false, err
 	}
@@ -215,7 +221,7 @@ func setInstanceBucketName(d *driver, s3Client Client, reqLogger logr.Logger, in
 		bucketLog.Info("Recovered existing bucket", "StorageBucket.Name", existingBucket)
 		instance.Status.StorageBucket.Name = existingBucket
 		instance.Status.StorageBucket.Provisioned = true
-		return instance.StatusUpdate(reqLogger, d.kubeClient)
+		return instance.StatusUpdate(reqLogger, d.KubeClient)
 	}
 
 	// Prepare to create a new bucket, if none exist.
@@ -231,5 +237,5 @@ func setInstanceBucketName(d *driver, s3Client Client, reqLogger logr.Logger, in
 	bucketLog.Info("Setting proposed bucket name", "StorageBucket.Name", proposedName)
 	instance.Status.StorageBucket.Name = proposedName
 	instance.Status.StorageBucket.Provisioned = false
-	return instance.StatusUpdate(reqLogger, d.kubeClient)
+	return instance.StatusUpdate(reqLogger, d.KubeClient)
 }

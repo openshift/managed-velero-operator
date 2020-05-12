@@ -26,9 +26,9 @@ func TestCreateBucket(t *testing.T) {
 			Project:   "dummy-project-id",
 			InfraName: "dummy-infra",
 		},
-		Context:    ctx,
-		kubeClient: fakekubeclient.NewFakeClient(localObjects...),
 	}
+	drv.Context = ctx
+	drv.KubeClient = fakekubeclient.NewFakeClient(localObjects...)
 	err := drv.createBucket(fakeGClient, "dummy-bucket-name")
 	if err != nil {
 		t.Errorf("CreateBucket() Error: %v", err)

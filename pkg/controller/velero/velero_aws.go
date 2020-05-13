@@ -3,6 +3,8 @@ package velero
 import (
 	"context"
 
+	"github.com/openshift/managed-velero-operator/pkg/storage/s3"
+
 	configv1 "github.com/openshift/api/config/v1"
 
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -22,6 +24,8 @@ func newReconcileVeleroAWS(ctx context.Context, mgr manager.Manager, config *con
 		},
 	}
 	r.vtable = r
+
+	r.driver = s3.NewDriver(ctx, r.config, r.client)
 
 	return r
 }

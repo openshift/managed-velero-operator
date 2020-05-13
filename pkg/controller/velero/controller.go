@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/openshift/managed-velero-operator/pkg/storage"
-
 	veleroInstallCR "github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -138,14 +136,6 @@ func (r *ReconcileVeleroBase) Reconcile(request reconcile.Request) (reconcile.Re
 		}
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
-	}
-
-	// Create the Storage Driver
-	if r.driver == nil {
-		r.driver, err = storage.NewDriver(r.config, r.client)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
 	}
 
 	// Check if bucket needs to be reconciled

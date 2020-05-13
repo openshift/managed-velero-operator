@@ -237,7 +237,7 @@ func main() {
 	}
 
 	// Setup all Controllers
-	if err := controller.AddToManager(mgr); err != nil {
+	if err := controller.AddToManager(mgr, infraStatus); err != nil {
 		log.Error(err, "")
 		os.Exit(1)
 	}

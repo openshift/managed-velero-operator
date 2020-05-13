@@ -8,9 +8,10 @@ import (
 
 	veleroInstallCR "github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2"
 
+	appsv1 "k8s.io/api/apps/v1"
+	configv1 "github.com/openshift/api/config/v1"
 	minterv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
 	velerov1 "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
-	appsv1 "k8s.io/api/apps/v1"
 
 	"github.com/cblecker/platformutils"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -31,13 +32,13 @@ var (
 
 // Add creates a new Velero Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
-func Add(mgr manager.Manager) error {
-	return add(mgr, newReconciler(mgr))
+func Add(mgr manager.Manager, config *configv1.InfrastructureStatus) error {
+	return add(mgr, newReconciler(mgr, config))
 }
 
 // newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileVelero{client: mgr.GetClient(), scheme: mgr.GetScheme()}
+func newReconciler(mgr manager.Manager, config *configv1.InfrastructureStatus) reconcile.Reconciler {
+	return &ReconcileVelero{client: mgr.GetClient(), scheme: mgr.GetScheme(), config: config}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -102,6 +103,7 @@ type ReconcileVelero struct {
 	// that reads objects from the cache and writes to the apiserver
 	client client.Client
 	scheme *runtime.Scheme
+	config *configv1.InfrastructureStatus
 	driver storage.Driver
 }
 

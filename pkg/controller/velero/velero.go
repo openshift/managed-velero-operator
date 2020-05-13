@@ -2,7 +2,6 @@ package velero
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 	"strings"
 
@@ -18,7 +17,6 @@ import (
 
 	veleroInstall "github.com/vmware-tanzu/velero/pkg/install"
 
-	endpoints "github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/go-logr/logr"
 	"github.com/operator-framework/operator-sdk/pkg/metrics"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -103,18 +101,9 @@ func (r *ReconcileVeleroBase) provisionVelero(reqLogger logr.Logger, namespace s
 
 	// Install CredentialsRequest
 	foundCr := &minterv1.CredentialsRequest{}
-	var cr *minterv1.CredentialsRequest
-	switch platformType {
-	case configv1.AWSPlatformType:
-		partition, ok := endpoints.PartitionForRegion(endpoints.DefaultPartitions(), locationConfig["region"])
-		if !ok {
-			return reconcile.Result{}, fmt.Errorf("no partition found for region %q", locationConfig["region"])
-		}
-		cr = awsCredentialsRequest(namespace, credentialsRequestName, partition.ID(), instance.Status.StorageBucket.Name)
-	case configv1.GCPPlatformType:
-		cr = gcpCredentialsRequest(namespace, credentialsRequestName)
-	default:
-		return reconcile.Result{}, fmt.Errorf("unable to determine platform")
+	cr, err := r.vtable.CredentialsRequest(namespace, instance.Status.StorageBucket.Name)
+	if err != nil {
+		return reconcile.Result{}, err
 	}
 	crName, err := runtimeClient.ObjectKeyFromObject(cr)
 	if err != nil {
@@ -248,100 +237,6 @@ func (r *ReconcileVeleroBase) provisionVelero(reqLogger logr.Logger, namespace s
 	}
 
 	return reconcile.Result{}, nil
-}
-
-func awsCredentialsRequest(namespace, name, partitionID, bucketName string) *minterv1.CredentialsRequest {
-	codec, _ := minterv1.NewCodec()
-	provSpec, _ := codec.EncodeProviderSpec(
-		&minterv1.AWSProviderSpec{
-			TypeMeta: metav1.TypeMeta{
-				Kind: "AWSProviderSpec",
-			},
-			StatementEntries: []minterv1.StatementEntry{
-				{
-					Effect: "Allow",
-					Action: []string{
-						"ec2:DescribeVolumes",
-						"ec2:DescribeSnapshots",
-						"ec2:CreateTags",
-						"ec2:CreateVolume",
-						"ec2:CreateSnapshot",
-						"ec2:DeleteSnapshot",
-					},
-					Resource: "*",
-				},
-				{
-					Effect: "Allow",
-					Action: []string{
-						"s3:GetObject",
-						"s3:DeleteObject",
-						"s3:PutObject",
-						"s3:AbortMultipartUpload",
-						"s3:ListMultipartUploadParts",
-					},
-					Resource: fmt.Sprintf("arn:%s:s3:::%s/*", partitionID, bucketName),
-				},
-				{
-					Effect: "Allow",
-					Action: []string{
-						"s3:ListBucket",
-					},
-					Resource: fmt.Sprintf("arn:%s:s3:::%s", partitionID, bucketName),
-				},
-			},
-		})
-
-	return &minterv1.CredentialsRequest{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "CredentialsRequest",
-			APIVersion: minterv1.SchemeGroupVersion.String(),
-		},
-		Spec: minterv1.CredentialsRequestSpec{
-			SecretRef: corev1.ObjectReference{
-				Name:      name,
-				Namespace: namespace,
-			},
-			ProviderSpec: provSpec,
-		},
-	}
-}
-
-func gcpCredentialsRequest(namespace, name string) *minterv1.CredentialsRequest {
-	codec, _ := minterv1.NewCodec()
-	provSpec, _ := codec.EncodeProviderSpec(
-		&minterv1.GCPProviderSpec{
-			TypeMeta: metav1.TypeMeta{
-				Kind: "GCPProviderSpec",
-			},
-			PredefinedRoles: []string{
-				"roles/compute.storageAdmin",
-				"roles/iam.serviceAccountUser",
-				"roles/cloudmigration.storageaccess",
-			},
-			SkipServiceCheck: true,
-		})
-
-	return &minterv1.CredentialsRequest{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "CredentialsRequest",
-			APIVersion: minterv1.SchemeGroupVersion.String(),
-		},
-		Spec: minterv1.CredentialsRequestSpec{
-			SecretRef: corev1.ObjectReference{
-				Name:      name,
-				Namespace: namespace,
-			},
-			ProviderSpec: provSpec,
-		},
-	}
 }
 
 func veleroDeployment(namespace string, platform configv1.PlatformType, veleroImageRegistry string) *appsv1.Deployment {

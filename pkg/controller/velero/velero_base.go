@@ -12,6 +12,9 @@ import (
 // ReconcileVeleroBase reconciles a Velero object.  It serves as an "abstract"
 // base struct for embedding in other cloud-platform-specific structs.
 type ReconcileVeleroBase struct {
+	// virtual method table
+	vtable VeleroReconciler
+
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
 	client client.Client

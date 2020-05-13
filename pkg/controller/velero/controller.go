@@ -2,6 +2,7 @@ package velero
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/openshift/managed-velero-operator/pkg/storage"
@@ -30,12 +31,32 @@ var (
 // Add creates a new Velero Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager, config *configv1.InfrastructureStatus) error {
-	return add(mgr, newReconciler(mgr, config))
+	r, err := newVeleroReconciler(mgr, config)
+	if err != nil {
+		return err
+	}
+
+	return add(mgr, r)
 }
 
-// newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager, config *configv1.InfrastructureStatus) reconcile.Reconciler {
-	return &ReconcileVeleroBase{client: mgr.GetClient(), scheme: mgr.GetScheme(), config: config}
+// newVeleroReconciler returns a new VeleroReconciler for the detected platform.
+func newVeleroReconciler(mgr manager.Manager, config *configv1.InfrastructureStatus) (VeleroReconciler, error) {
+	var r VeleroReconciler
+
+	ctx := context.Background()
+
+	switch config.PlatformStatus.Type {
+	case configv1.AWSPlatformType:
+		r = newReconcileVeleroAWS(ctx, mgr, config)
+
+	case configv1.GCPPlatformType:
+		r = newReconcileVeleroGCP(ctx, mgr, config)
+
+	default:
+		return nil, fmt.Errorf("unable to determine platform")
+	}
+
+	return r, nil
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -89,6 +110,10 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	return nil
+}
+
+type VeleroReconciler interface {
+	reconcile.Reconciler
 }
 
 // blank assignment to verify that ReconcileVeleroBase implements reconcile.Reconciler

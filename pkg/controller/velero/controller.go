@@ -121,6 +121,10 @@ type VeleroReconciler interface {
 
 	// GetLocationConfig returns the Velero BackupStorageLocationSpec.Config field.
 	GetLocationConfig() map[string]string
+
+	// CredentialsRequest creates an appropriate CredentialsRequest object for the
+	// cloud platform.
+	CredentialsRequest(namespace, bucketName string) (*minterv1.CredentialsRequest, error)
 }
 
 // blank assignment to verify that ReconcileVeleroBase implements reconcile.Reconciler

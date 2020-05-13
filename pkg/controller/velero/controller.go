@@ -125,6 +125,10 @@ type VeleroReconciler interface {
 	// CredentialsRequest creates an appropriate CredentialsRequest object for the
 	// cloud platform.
 	CredentialsRequest(namespace, bucketName string) (*minterv1.CredentialsRequest, error)
+
+	// VeleroDeployment creates a base Deployment object with which to deploy Velero
+	// on the cloud platform.
+	VeleroDeployment(namespace string) *appsv1.Deployment
 }
 
 // blank assignment to verify that ReconcileVeleroBase implements reconcile.Reconciler

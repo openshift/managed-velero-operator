@@ -5,6 +5,7 @@ import (
 
 	"github.com/openshift/managed-velero-operator/pkg/storage/gcs"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -12,6 +13,8 @@ import (
 	minterv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
 
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	veleroInstall "github.com/vmware-tanzu/velero/pkg/install"
 )
 
 // ReconcileVeleroGCP reconciles a Velero object on Google Cloud Platform
@@ -66,4 +69,49 @@ func (r *ReconcileVeleroGCP) CredentialsRequest(namespace, bucketName string) (*
 			ProviderSpec: providerSpec,
 		},
 	}, nil
+}
+
+func (r *ReconcileVeleroGCP) VeleroDeployment(namespace string) *appsv1.Deployment {
+	imageRegistry := r.GetImageRegistry()
+
+	deployment := veleroInstall.Deployment(
+		namespace,
+		veleroInstall.WithPlugins(
+			[]string{imageRegistry + "/" + veleroGcpImageTag}),
+		veleroInstall.WithImage(
+			imageRegistry + "/" + veleroImageTag))
+
+	defaultMode := int32(40)
+	deployment.Spec.Template.Spec.Volumes = append(
+		deployment.Spec.Template.Spec.Volumes,
+		corev1.Volume{
+			Name: "cloud-credentials",
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName:  credentialsRequestName,
+					DefaultMode: &defaultMode,
+				},
+			},
+		},
+	)
+
+	deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(
+		deployment.Spec.Template.Spec.Containers[0].VolumeMounts,
+		corev1.VolumeMount{
+			Name:      "cloud-credentials",
+			MountPath: "/credentials",
+		},
+	)
+
+	deployment.Spec.Template.Spec.Containers[0].Env = append(
+		deployment.Spec.Template.Spec.Containers[0].Env,
+		[]corev1.EnvVar{
+			{
+				Name:  "GOOGLE_APPLICATION_CREDENTIALS",
+				Value: "/credentials/service_account.json",
+			},
+		}...
+	)
+
+	return deployment
 }

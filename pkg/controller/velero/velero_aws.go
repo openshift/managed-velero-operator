@@ -3,11 +3,13 @@ package velero
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 
 	"github.com/openshift/managed-velero-operator/pkg/storage/s3"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -15,6 +17,8 @@ import (
 	minterv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
 
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	veleroInstall "github.com/vmware-tanzu/velero/pkg/install"
 )
 
 // ReconcileVeleroAWS reconciles a Velero object on Amazon Web Services
@@ -116,4 +120,25 @@ func (r *ReconcileVeleroAWS) CredentialsRequest(namespace, bucketName string) (*
 			ProviderSpec: providerSpec,
 		},
 	}, nil
+}
+
+func (r *ReconcileVeleroAWS) VeleroDeployment(namespace string) *appsv1.Deployment {
+	imageRegistry := r.GetImageRegistry()
+
+	deployment := veleroInstall.Deployment(
+		namespace,
+		veleroInstall.WithEnvFromSecretKey(
+			strings.ToUpper(awsCredsSecretIDKey),
+			credentialsRequestName,
+			awsCredsSecretIDKey),
+		veleroInstall.WithEnvFromSecretKey(
+			strings.ToUpper(awsCredsSecretAccessKey),
+			credentialsRequestName,
+			awsCredsSecretAccessKey),
+		veleroInstall.WithPlugins(
+			[]string{imageRegistry + "/" + veleroAwsImageTag}),
+		veleroInstall.WithImage(
+			imageRegistry + "/" + veleroImageTag))
+
+	return deployment
 }

@@ -3,6 +3,7 @@ package velero
 import (
 	"github.com/openshift/managed-velero-operator/pkg/storage"
 
+	appsv1 "k8s.io/api/apps/v1"
 	configv1 "github.com/openshift/api/config/v1"
 	minterv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
 
@@ -42,4 +43,9 @@ func (r *ReconcileVeleroBase) GetLocationConfig() map[string]string {
 func (r *ReconcileVeleroBase) CredentialsRequest(namespace, bucketName string) (*minterv1.CredentialsRequest, error) {
 	// This method should always be overridden.
 	panic("VeleroReconciler.CredentialsRequest not implemented")
+}
+
+func (r *ReconcileVeleroBase) VeleroDeployment(namespace string) *appsv1.Deployment {
+	// This method should always be overridden.
+	panic("VeleroReconciler.VeleroDeployment not implemented")
 }

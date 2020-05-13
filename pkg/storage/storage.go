@@ -25,20 +25,10 @@ func NewDriver(cfg *configv1.InfrastructureStatus, client client.Client) (Driver
 
 	ctx := context.Background()
 
-	// Verify that we have received the needed platform information
 	switch cfg.PlatformStatus.Type {
 	case configv1.AWSPlatformType:
-		if cfg.PlatformStatus.AWS == nil ||
-			len(cfg.PlatformStatus.AWS.Region) < 1 {
-			return nil, fmt.Errorf("unable to determine AWS region")
-		}
 		driver = s3.NewDriver(ctx, cfg, client)
 	case configv1.GCPPlatformType:
-		if cfg.PlatformStatus.GCP == nil ||
-			len(cfg.PlatformStatus.GCP.Region) < 1 ||
-			len(cfg.PlatformStatus.GCP.ProjectID) < 1 {
-			return nil, fmt.Errorf("unable to determine GCP region")
-		}
 		driver = gcs.NewDriver(ctx, cfg, client)
 	default:
 		return nil, fmt.Errorf("unable to determine platform")

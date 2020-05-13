@@ -66,6 +66,27 @@ func printVersion() {
 	log.Info(fmt.Sprintf("Version of operator-sdk: %v", sdkVersion.Version))
 }
 
+// verifyPlatformStatus verifies all required platform details are present.
+func verifyPlatformStatus(platform *configv1.PlatformStatus) error {
+	switch platform.Type {
+	case configv1.AWSPlatformType:
+		if platform.AWS == nil ||
+			len(platform.AWS.Region) < 1 {
+			return fmt.Errorf("unable to determine AWS region")
+		}
+	case configv1.GCPPlatformType:
+		if platform.GCP == nil ||
+			len(platform.GCP.Region) < 1 ||
+			len(platform.GCP.ProjectID) < 1 {
+			return fmt.Errorf("unable to determine GCP region")
+		}
+	default:
+		return fmt.Errorf("unable to determine platform")
+	}
+
+	return nil
+}
+
 func main() {
 	// Add the zap logger flag set to the CLI. The flag set must
 	// be added before calling pflag.Parse().
@@ -200,6 +221,12 @@ func main() {
 	// TODO: expand support to other platforms
 	if !platformutils.IsPlatformSupported(infraStatus.PlatformStatus.Type, supportedPlatforms) {
 		log.Error(fmt.Errorf("expected %v got %v", supportedPlatforms, infraStatus.PlatformStatus.Type), "Unsupported platform")
+		os.Exit(1)
+	}
+
+	// Verify required platform details are present
+	if err = verifyPlatformStatus(infraStatus.PlatformStatus); err != nil {
+		log.Error(err, "Invalid platform status")
 		os.Exit(1)
 	}
 

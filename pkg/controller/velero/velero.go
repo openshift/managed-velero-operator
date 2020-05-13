@@ -163,7 +163,7 @@ func (r *ReconcileVeleroBase) provisionVelero(reqLogger logr.Logger, namespace s
 
 	// Install Deployment
 	foundDeployment := &appsv1.Deployment{}
-	deployment := veleroDeployment(namespace, platformType, determineVeleroImageRegistry(platformType, locationConfig["region"]))
+	deployment := veleroDeployment(namespace, platformType, r.vtable.GetImageRegistry())
 	deploymentName, err := runtimeClient.ObjectKeyFromObject(deployment)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -511,20 +511,6 @@ func metricsServiceFromDeployment(deployment *appsv1.Deployment) *corev1.Service
 			SessionAffinity: corev1.ServiceAffinityNone,
 		},
 	}
-}
-
-func determineVeleroImageRegistry(platform configv1.PlatformType, region string) string {
-	if platform == configv1.AWSPlatformType {
-		// Use the image in Chinese mirror if running on AWS China
-		for _, v := range awsChinaRegions {
-			if region == v {
-				return veleroImageRegistryCN
-			}
-		}
-	}
-
-	// Use global image by default
-	return veleroImageRegistry
 }
 
 func credentialsRequestSpecEqual(x, y minterv1.CredentialsRequestSpec) (bool, error) {

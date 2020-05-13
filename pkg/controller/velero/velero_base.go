@@ -22,3 +22,7 @@ type ReconcileVeleroBase struct {
 	config *configv1.InfrastructureStatus
 	driver storage.Driver
 }
+
+func (r *ReconcileVeleroBase) RegionInChina() bool {
+	return false
+}

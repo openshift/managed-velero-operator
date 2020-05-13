@@ -29,3 +29,12 @@ func newReconcileVeleroAWS(ctx context.Context, mgr manager.Manager, config *con
 
 	return r
 }
+
+func (r *ReconcileVeleroAWS) RegionInChina() bool {
+	for _, region := range awsChinaRegions {
+		if r.config.PlatformStatus.AWS.Region == region {
+			return true
+		}
+	}
+	return false
+}

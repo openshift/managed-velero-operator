@@ -112,6 +112,9 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 type VeleroReconciler interface {
 	reconcile.Reconciler
+
+	// RegionInChina returns whether the cloud platform region is in China.
+	RegionInChina() bool
 }
 
 // blank assignment to verify that ReconcileVeleroBase implements reconcile.Reconciler

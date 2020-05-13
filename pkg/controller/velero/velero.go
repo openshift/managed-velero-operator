@@ -34,20 +34,8 @@ func (r *ReconcileVeleroBase) provisionVelero(reqLogger logr.Logger, namespace s
 	var err error
 
 	platformType := r.config.PlatformStatus.Type
-
-	var locationConfig map[string]string
-	switch platformType {
-	case configv1.AWSPlatformType:
-		locationConfig = map[string]string{
-			"region": r.config.PlatformStatus.AWS.Region,
-		}
-	case configv1.GCPPlatformType:
-		// No region configuration needed for GCP
-	default:
-		return reconcile.Result{}, fmt.Errorf("unable to determine platform")
-	}
-
 	provider := strings.ToLower(string(platformType))
+	locationConfig := r.vtable.GetLocationConfig()
 
 	// Install BackupStorageLocation
 	foundBsl := &velerov1.BackupStorageLocation{}

@@ -115,6 +115,9 @@ type VeleroReconciler interface {
 
 	// RegionInChina returns whether the cloud platform region is in China.
 	RegionInChina() bool
+
+	// GetImageRegistry returns the Velero image registry location.
+	GetImageRegistry() string
 }
 
 // blank assignment to verify that ReconcileVeleroBase implements reconcile.Reconciler

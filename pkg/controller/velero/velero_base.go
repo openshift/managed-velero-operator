@@ -26,3 +26,10 @@ type ReconcileVeleroBase struct {
 func (r *ReconcileVeleroBase) RegionInChina() bool {
 	return false
 }
+
+func (r *ReconcileVeleroBase) GetImageRegistry() string {
+	if r.vtable.RegionInChina() {
+		return veleroImageRegistryCN
+	}
+	return veleroImageRegistry
+}

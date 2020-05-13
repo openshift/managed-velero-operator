@@ -113,5 +113,5 @@ func (r *ReconcileVeleroGCP) VeleroDeployment(namespace string) *appsv1.Deployme
 		}...
 	)
 
-	return deployment
+	return finishVeleroDeployment(deployment)
 }

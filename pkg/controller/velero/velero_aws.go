@@ -140,5 +140,5 @@ func (r *ReconcileVeleroAWS) VeleroDeployment(namespace string) *appsv1.Deployme
 		veleroInstall.WithImage(
 			imageRegistry + "/" + veleroImageTag))
 
-	return deployment
+	return finishVeleroDeployment(deployment)
 }

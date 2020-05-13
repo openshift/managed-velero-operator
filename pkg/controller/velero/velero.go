@@ -8,7 +8,6 @@ import (
 	veleroInstallCR "github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2"
 
 	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
-	configv1 "github.com/openshift/api/config/v1"
 	minterv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
 	velerov1 "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -140,7 +139,7 @@ func (r *ReconcileVeleroBase) provisionVelero(reqLogger logr.Logger, namespace s
 
 	// Install Deployment
 	foundDeployment := &appsv1.Deployment{}
-	deployment := veleroDeployment(namespace, platformType, r.vtable.GetImageRegistry())
+	deployment := r.vtable.VeleroDeployment(namespace)
 	deploymentName, err := runtimeClient.ObjectKeyFromObject(deployment)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -239,52 +238,7 @@ func (r *ReconcileVeleroBase) provisionVelero(reqLogger logr.Logger, namespace s
 	return reconcile.Result{}, nil
 }
 
-func veleroDeployment(namespace string, platform configv1.PlatformType, veleroImageRegistry string) *appsv1.Deployment {
-	var deployment *appsv1.Deployment
-
-	switch platform {
-	case configv1.AWSPlatformType:
-		deployment = veleroInstall.Deployment(namespace,
-			veleroInstall.WithEnvFromSecretKey(strings.ToUpper(awsCredsSecretIDKey), credentialsRequestName, awsCredsSecretIDKey),
-			veleroInstall.WithEnvFromSecretKey(strings.ToUpper(awsCredsSecretAccessKey), credentialsRequestName, awsCredsSecretAccessKey),
-			veleroInstall.WithPlugins([]string{veleroImageRegistry + "/" + veleroAwsImageTag}),
-			veleroInstall.WithImage(veleroImageRegistry + "/" + veleroImageTag),
-		)
-	case configv1.GCPPlatformType:
-		deployment = veleroInstall.Deployment(namespace,
-			veleroInstall.WithPlugins([]string{veleroImageRegistry + "/" + veleroGcpImageTag}),
-			veleroInstall.WithImage(veleroImageRegistry + "/" + veleroImageTag),
-		)
-		defaultMode := int32(420)
-		deployment.Spec.Template.Spec.Volumes = append(
-			deployment.Spec.Template.Spec.Volumes,
-			corev1.Volume{
-				Name: "cloud-credentials",
-				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{
-						SecretName:  credentialsRequestName,
-						DefaultMode: &defaultMode,
-					},
-				},
-			},
-		)
-
-		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(
-			deployment.Spec.Template.Spec.Containers[0].VolumeMounts,
-			corev1.VolumeMount{
-				Name:      "cloud-credentials",
-				MountPath: "/credentials",
-			},
-		)
-
-		deployment.Spec.Template.Spec.Containers[0].Env = append(deployment.Spec.Template.Spec.Containers[0].Env, []corev1.EnvVar{
-			{
-				Name:  "GOOGLE_APPLICATION_CREDENTIALS",
-				Value: "/credentials/service_account.json",
-			},
-		}...)
-	}
-
+func finishVeleroDeployment(deployment *appsv1.Deployment) *appsv1.Deployment {
 	replicas := int32(1)
 	terminationGracePeriodSeconds := int64(30)
 	revisionHistoryLimit := int32(2)

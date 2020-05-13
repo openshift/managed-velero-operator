@@ -38,3 +38,7 @@ func (r *ReconcileVeleroAWS) RegionInChina() bool {
 	}
 	return false
 }
+
+func (r *ReconcileVeleroAWS) GetLocationConfig() map[string]string {
+	return map[string]string{"region": r.config.PlatformStatus.AWS.Region}
+}

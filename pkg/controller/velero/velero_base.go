@@ -33,3 +33,7 @@ func (r *ReconcileVeleroBase) GetImageRegistry() string {
 	}
 	return veleroImageRegistry
 }
+
+func (r *ReconcileVeleroBase) GetLocationConfig() map[string]string {
+	return nil
+}

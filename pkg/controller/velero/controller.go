@@ -118,6 +118,9 @@ type VeleroReconciler interface {
 
 	// GetImageRegistry returns the Velero image registry location.
 	GetImageRegistry() string
+
+	// GetLocationConfig returns the Velero BackupStorageLocationSpec.Config field.
+	GetLocationConfig() map[string]string
 }
 
 // blank assignment to verify that ReconcileVeleroBase implements reconcile.Reconciler

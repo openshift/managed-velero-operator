@@ -13,7 +13,6 @@ import (
 	minterv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
 	velerov1 "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
 
-	"github.com/cblecker/platformutils"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -128,19 +127,9 @@ func (r *ReconcileVelero) Reconcile(request reconcile.Request) (reconcile.Result
 		return reconcile.Result{}, err
 	}
 
-	// Grab infrastructureStatus to determine where OpenShift is installed.
-	pc, err := platformutils.NewClient(context.TODO())
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	infraStatus, err := pc.GetInfrastructureStatus()
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
 	// Create the Storage Driver
 	if r.driver == nil {
-		r.driver, err = storage.NewDriver(infraStatus, r.client)
+		r.driver, err = storage.NewDriver(r.config, r.client)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -154,5 +143,5 @@ func (r *ReconcileVelero) Reconcile(request reconcile.Request) (reconcile.Result
 	}
 
 	// Now go provision Velero
-	return r.provisionVelero(reqLogger, request.Namespace, infraStatus.PlatformStatus, instance)
+	return r.provisionVelero(reqLogger, request.Namespace, instance)
 }

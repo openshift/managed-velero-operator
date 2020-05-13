@@ -48,14 +48,16 @@ var (
 	awsChinaRegions = []string{"cn-north-1", "cn-northwest-1"}
 )
 
-func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace string, platformStatus *configv1.PlatformStatus, instance *veleroInstallCR.VeleroInstall) (reconcile.Result, error) {
+func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace string, instance *veleroInstallCR.VeleroInstall) (reconcile.Result, error) {
 	var err error
 
+	platformType := r.config.PlatformStatus.Type
+
 	var locationConfig map[string]string
-	switch r.driver.GetPlatformType() {
+	switch platformType {
 	case configv1.AWSPlatformType:
 		locationConfig = map[string]string{
-			"region": platformStatus.AWS.Region,
+			"region": r.config.PlatformStatus.AWS.Region,
 		}
 	case configv1.GCPPlatformType:
 		// No region configuration needed for GCP
@@ -63,7 +65,7 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 		return reconcile.Result{}, fmt.Errorf("unable to determine platform")
 	}
 
-	provider := strings.ToLower(string(r.driver.GetPlatformType()))
+	provider := strings.ToLower(string(platformType))
 
 	// Install BackupStorageLocation
 	foundBsl := &velerov1.BackupStorageLocation{}
@@ -132,7 +134,7 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 	// Install CredentialsRequest
 	foundCr := &minterv1.CredentialsRequest{}
 	var cr *minterv1.CredentialsRequest
-	switch r.driver.GetPlatformType() {
+	switch platformType {
 	case configv1.AWSPlatformType:
 		partition, ok := endpoints.PartitionForRegion(endpoints.DefaultPartitions(), locationConfig["region"])
 		if !ok {
@@ -179,7 +181,7 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 
 	// Install Deployment
 	foundDeployment := &appsv1.Deployment{}
-	deployment := veleroDeployment(namespace, r.driver.GetPlatformType(), determineVeleroImageRegistry(r.driver.GetPlatformType(), locationConfig["region"]))
+	deployment := veleroDeployment(namespace, platformType, determineVeleroImageRegistry(platformType, locationConfig["region"]))
 	deploymentName, err := runtimeClient.ObjectKeyFromObject(deployment)
 	if err != nil {
 		return reconcile.Result{}, err

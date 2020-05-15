@@ -212,7 +212,7 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 	// Install Metrics Service
 	foundService := &corev1.Service{}
 	service := metricsServiceFromDeployment(deployment)
-	serviceName, err := runtimeClient.ObjectKeyFromObject(cr)
+	serviceName, err := runtimeClient.ObjectKeyFromObject(service)
 	if err != nil {
 		return reconcile.Result{}, err
 	}

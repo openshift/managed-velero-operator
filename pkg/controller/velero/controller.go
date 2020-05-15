@@ -14,8 +14,6 @@ import (
 	velerov1 "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
 
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -37,7 +35,7 @@ func Add(mgr manager.Manager, config *configv1.InfrastructureStatus) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager, config *configv1.InfrastructureStatus) reconcile.Reconciler {
-	return &ReconcileVelero{client: mgr.GetClient(), scheme: mgr.GetScheme(), config: config}
+	return &ReconcileVeleroBase{client: mgr.GetClient(), scheme: mgr.GetScheme(), config: config}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -93,22 +91,12 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	return nil
 }
 
-// blank assignment to verify that ReconcileVelero implements reconcile.Reconciler
-var _ reconcile.Reconciler = &ReconcileVelero{}
-
-// ReconcileVelero reconciles a Velero object
-type ReconcileVelero struct {
-	// This client, initialized using mgr.Client() above, is a split client
-	// that reads objects from the cache and writes to the apiserver
-	client client.Client
-	scheme *runtime.Scheme
-	config *configv1.InfrastructureStatus
-	driver storage.Driver
-}
+// blank assignment to verify that ReconcileVeleroBase implements reconcile.Reconciler
+var _ reconcile.Reconciler = &ReconcileVeleroBase{}
 
 // Reconcile reads that state of the cluster for a Velero object and makes changes based on the state read
 // and what is in the Velero.Spec
-func (r *ReconcileVelero) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *ReconcileVeleroBase) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling Velero Installation")
 	var err error

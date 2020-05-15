@@ -30,7 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace string, instance *veleroInstallCR.VeleroInstall) (reconcile.Result, error) {
+func (r *ReconcileVeleroBase) provisionVelero(reqLogger logr.Logger, namespace string, instance *veleroInstallCR.VeleroInstall) (reconcile.Result, error) {
 	var err error
 
 	platformType := r.config.PlatformStatus.Type

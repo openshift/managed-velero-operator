@@ -4,6 +4,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/googleapis/google-cloud-go-testing/storage/stiface"
 	storageConstants "github.com/openshift/managed-velero-operator/pkg/storage/constants"
 
 	gstorage "cloud.google.com/go/storage"
@@ -15,7 +16,7 @@ var (
 )
 
 // CreateBucket creates a new GCS bucket.
-func (d *driver) createBucket(gcsClient *gstorage.Client, bucketName string) error {
+func (d *driver) createBucket(gcsClient stiface.Client, bucketName string) error {
 	return gcsClient.Bucket(bucketName).Create(d.Context, d.Config.Project, &gstorage.BucketAttrs{
 		Location:                 strings.ToUpper(d.Config.Region),
 		UniformBucketLevelAccess: UniformBucketLevelAccessEnabled,
@@ -25,7 +26,7 @@ func (d *driver) createBucket(gcsClient *gstorage.Client, bucketName string) err
 
 // enforceBucketLabels enforces labels on an GCS bucket. The tags are used to indicate that velero backups
 // are stored in the bucket, and to identify the associated cluster.
-func (d *driver) enforceBucketLabels(gcsClient *gstorage.Client, bucketName string) error {
+func (d *driver) enforceBucketLabels(gcsClient stiface.Client, bucketName string) error {
 	bucketAttrs := &gstorage.BucketAttrsToUpdate{}
 	labels := buildLabelMap(d.Config.InfraName)
 	for k, v := range labels {
@@ -36,7 +37,7 @@ func (d *driver) enforceBucketLabels(gcsClient *gstorage.Client, bucketName stri
 }
 
 // listBuckets lists all buckets in the GCP account.
-func (d *driver) listBuckets(gcsClient *gstorage.Client) ([]*gstorage.BucketAttrs, error) {
+func (d *driver) listBuckets(gcsClient stiface.Client) ([]*gstorage.BucketAttrs, error) {
 	var results []*gstorage.BucketAttrs
 
 	list := gcsClient.Buckets(d.Context, d.Config.Project)

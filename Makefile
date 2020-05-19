@@ -16,4 +16,11 @@ docker-build: build
 .PHONY: generate
 generate:
 	operator-sdk generate k8s
-	operator-sdk generate openapi
+	operator-sdk generate crds
+	openapi-gen --logtostderr=true \
+		-i ./pkg/apis/managed/v1alpha2 \
+		-o "" \
+		-O zz_generated.openapi \
+		-p ./pkg/apis/managed/v1alpha2 \
+		-h /dev/null \
+		-r "-"

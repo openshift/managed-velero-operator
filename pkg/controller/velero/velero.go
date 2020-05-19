@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	veleroInstallCR "github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2"
-	storageConstants "github.com/openshift/managed-velero-operator/pkg/storage/constants"
 
 	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	configv1 "github.com/openshift/api/config/v1"
@@ -25,8 +24,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	runtimeClient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -53,7 +52,7 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 	var err error
 
 	var locationConfig map[string]string
-	switch platformStatus.Type {
+	switch r.driver.GetPlatformType() {
 	case configv1.AWSPlatformType:
 		locationConfig = map[string]string{
 			"region": platformStatus.AWS.Region,
@@ -64,10 +63,16 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 		return reconcile.Result{}, fmt.Errorf("unable to determine platform")
 	}
 
+	provider := strings.ToLower(string(r.driver.GetPlatformType()))
+
 	// Install BackupStorageLocation
 	foundBsl := &velerov1.BackupStorageLocation{}
-	bsl := veleroInstall.BackupStorageLocation(namespace, strings.ToLower(string(platformStatus.Type)), instance.Status.StorageBucket.Name, "", locationConfig)
-	if err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: storageConstants.DefaultVeleroBackupStorageLocation}, foundBsl); err != nil {
+	bsl := veleroInstall.BackupStorageLocation(namespace, provider, instance.Status.StorageBucket.Name, "", locationConfig)
+	bslName, err := runtimeClient.ObjectKeyFromObject(bsl)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	if err = r.client.Get(context.TODO(), bslName, foundBsl); err != nil {
 		if errors.IsNotFound(err) {
 			// Didn't find BackupStorageLocation
 			reqLogger.Info("Creating BackupStorageLocation")
@@ -94,8 +99,12 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 
 	// Install VolumeSnapshotLocation
 	foundVsl := &velerov1.VolumeSnapshotLocation{}
-	vsl := veleroInstall.VolumeSnapshotLocation(namespace, strings.ToLower(string(platformStatus.Type)), locationConfig)
-	if err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: "default"}, foundVsl); err != nil {
+	vsl := veleroInstall.VolumeSnapshotLocation(namespace, provider, locationConfig)
+	vslName, err := runtimeClient.ObjectKeyFromObject(vsl)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	if err = r.client.Get(context.TODO(), vslName, foundVsl); err != nil {
 		if errors.IsNotFound(err) {
 			// Didn't find VolumeSnapshotLocation
 			reqLogger.Info("Creating VolumeSnapshotLocation")
@@ -123,7 +132,7 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 	// Install CredentialsRequest
 	foundCr := &minterv1.CredentialsRequest{}
 	var cr *minterv1.CredentialsRequest
-	switch platformStatus.Type {
+	switch r.driver.GetPlatformType() {
 	case configv1.AWSPlatformType:
 		partition, ok := endpoints.PartitionForRegion(endpoints.DefaultPartitions(), locationConfig["region"])
 		if !ok {
@@ -135,7 +144,11 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 	default:
 		return reconcile.Result{}, fmt.Errorf("unable to determine platform")
 	}
-	if err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: credentialsRequestName}, foundCr); err != nil {
+	crName, err := runtimeClient.ObjectKeyFromObject(cr)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	if err = r.client.Get(context.TODO(), crName, foundCr); err != nil {
 		if errors.IsNotFound(err) {
 			// Didn't find CredentialsRequest
 			reqLogger.Info("Creating CredentialsRequest")
@@ -166,8 +179,12 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 
 	// Install Deployment
 	foundDeployment := &appsv1.Deployment{}
-	deployment := veleroDeployment(namespace, platformStatus.Type, determineVeleroImageRegistry(platformStatus.Type, locationConfig["region"]))
-	if err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: "velero"}, foundDeployment); err != nil {
+	deployment := veleroDeployment(namespace, r.driver.GetPlatformType(), determineVeleroImageRegistry(r.driver.GetPlatformType(), locationConfig["region"]))
+	deploymentName, err := runtimeClient.ObjectKeyFromObject(deployment)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	if err = r.client.Get(context.TODO(), deploymentName, foundDeployment); err != nil {
 		if errors.IsNotFound(err) {
 			// Didn't find Deployment
 			reqLogger.Info("Creating Deployment")
@@ -195,9 +212,9 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 	// Install Metrics Service
 	foundService := &corev1.Service{}
 	service := metricsServiceFromDeployment(deployment)
-	serviceName := types.NamespacedName{
-		Namespace: service.ObjectMeta.Namespace,
-		Name:      service.ObjectMeta.Name,
+	serviceName, err := runtimeClient.ObjectKeyFromObject(service)
+	if err != nil {
+		return reconcile.Result{}, err
 	}
 	if err = r.client.Get(context.TODO(), serviceName, foundService); err != nil {
 		if errors.IsNotFound(err) {
@@ -231,9 +248,9 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 	// Install Metrics ServiceMonitor
 	foundServiceMonitor := &monitoringv1.ServiceMonitor{}
 	serviceMonitor := metrics.GenerateServiceMonitor(foundService)
-	serviceMonitorName := types.NamespacedName{
-		Namespace: serviceMonitor.ObjectMeta.Namespace,
-		Name:      serviceMonitor.ObjectMeta.Name,
+	serviceMonitorName, err := runtimeClient.ObjectKeyFromObject(serviceMonitor)
+	if err != nil {
+		return reconcile.Result{}, err
 	}
 	if err = r.client.Get(context.TODO(), serviceMonitorName, foundServiceMonitor); err != nil {
 		if errors.IsNotFound(err) {
@@ -364,12 +381,12 @@ func veleroDeployment(namespace string, platform configv1.PlatformType, veleroIm
 			veleroInstall.WithEnvFromSecretKey(strings.ToUpper(awsCredsSecretIDKey), credentialsRequestName, awsCredsSecretIDKey),
 			veleroInstall.WithEnvFromSecretKey(strings.ToUpper(awsCredsSecretAccessKey), credentialsRequestName, awsCredsSecretAccessKey),
 			veleroInstall.WithPlugins([]string{veleroImageRegistry + "/" + veleroAwsImageTag}),
-			veleroInstall.WithImage(veleroImageRegistry+"/"+veleroImageTag),
+			veleroInstall.WithImage(veleroImageRegistry + "/" + veleroImageTag),
 		)
 	case configv1.GCPPlatformType:
 		deployment = veleroInstall.Deployment(namespace,
 			veleroInstall.WithPlugins([]string{veleroImageRegistry + "/" + veleroGcpImageTag}),
-			veleroInstall.WithImage(veleroImageRegistry+"/"+veleroImageTag),
+			veleroInstall.WithImage(veleroImageRegistry + "/" + veleroImageTag),
 		)
 		defaultMode := int32(420)
 		deployment.Spec.Template.Spec.Volumes = append(

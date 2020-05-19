@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/googleapis/google-cloud-go-testing/storage/stiface"
 	"github.com/openshift/managed-velero-operator/version"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 
@@ -22,7 +23,7 @@ var (
 
 // NewGcsClient reads the gcp secrets in the operator's namespace and uses
 // them to create a new client for accessing the GCS API.
-func NewGcsClient(kubeClient client.Client) (*gstorage.Client, error) {
+func NewGcsClient(kubeClient client.Client) (stiface.Client, error) {
 	var err error
 
 	namespace, err := k8sutil.GetOperatorNamespace()
@@ -55,5 +56,5 @@ func NewGcsClient(kubeClient client.Client) (*gstorage.Client, error) {
 		return nil, err
 	}
 
-	return gcsClient, nil
+	return stiface.AdaptClient(gcsClient), nil
 }

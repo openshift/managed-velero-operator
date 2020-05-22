@@ -16,9 +16,9 @@ require (
 	cloud.google.com/go v0.57.0 // indirect
 	cloud.google.com/go/storage v1.6.0
 	// TODO include relevant Azure golang dependecies
-    github.com/Azure/azure-sdk-for-go v42.3.0+incompatible
-    github.com/Azure/azure-storage-blob-go v0.8.0
-    github.com/Azure/go-autorest v12.0.0+incompatible
+	github.com/Azure/azure-sdk-for-go v42.3.0+incompatible
+	github.com/Azure/azure-storage-blob-go v0.8.0
+	github.com/Azure/go-autorest v12.0.0+incompatible
 	github.com/cblecker/platformutils v0.0.0-20200321191645-443abe7fea11
 	github.com/coreos/prometheus-operator v0.38.0
 	github.com/googleapis/google-cloud-go-testing v0.0.0-20191008195207-8e1d251e947d

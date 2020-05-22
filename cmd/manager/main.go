@@ -57,6 +57,7 @@ const ManagedVeleroOperatorNamespace = "openshift-velero"
 var supportedPlatforms = []configv1.PlatformType{
 	configv1.AWSPlatformType,
 	configv1.GCPPlatformType,
+	configv1.AzurePlatformType,
 }
 
 func printVersion() {

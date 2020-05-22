@@ -9,6 +9,7 @@ import (
 	veleroInstallCR "github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2"
 	"github.com/openshift/managed-velero-operator/pkg/storage/gcs"
 	"github.com/openshift/managed-velero-operator/pkg/storage/s3"
+	"github.com/openshift/managed-velero-operator/pkg/storage/acs"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -40,6 +41,12 @@ func NewDriver(cfg *configv1.InfrastructureStatus, client client.Client) (Driver
 			return nil, fmt.Errorf("unable to determine GCP region")
 		}
 		driver = gcs.NewDriver(ctx, cfg, client)
+	case configv1.AzurePlatformType:
+		if cfg.PlatformStatus.Azure == nil ||
+			len(cfg.PlatformStatus.Azure.ResourceGroupName) < 1 {
+			return nil, fmt.Errorf("unable to determine Azure region")
+		}
+		driver = acs.NewDriver(ctx, cfg, client)
 	default:
 		return nil, fmt.Errorf("unable to determine platform")
 	}

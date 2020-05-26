@@ -59,12 +59,12 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.
 		return err
 	}
 
-	bucketLog := reqLogger.WithValues("StorageBucket.Name", instance.Status.StorageBucket.Name, "StorageBucket.Region", d.Config.Region)
+	bucketLog := reqLogger.WithValues("StorageBucket.Name", instance.Status.GCP.StorageBucket.Name, "StorageBucket.Region", d.Config.Region)
 
 	// This switch handles the provisioning steps/checks
 	switch {
 	// We don't yet have a bucket name selected
-	case instance.Status.StorageBucket.Name == "":
+	case instance.Status.GCP.StorageBucket.Name == "":
 
 		// Use an existing bucket, if it exists.
 		bucketLog.Info("No GCS bucket defined. Searching for existing bucket to use")
@@ -76,8 +76,8 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.
 		existingBucket := d.findVeleroBucket(bucketlist)
 		if existingBucket != "" {
 			bucketLog.Info("Recovered existing bucket", "StorageBucket.Name", existingBucket)
-			instance.Status.StorageBucket.Name = existingBucket
-			instance.Status.StorageBucket.Provisioned = true
+			instance.Status.GCP.StorageBucket.Name = existingBucket
+			instance.Status.GCP.StorageBucket.Provisioned = true
 			return instance.StatusUpdate(reqLogger, d.KubeClient)
 		}
 
@@ -92,31 +92,31 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.
 		}
 
 		bucketLog.Info("Setting proposed bucket name", "StorageBucket.Name", proposedName)
-		instance.Status.StorageBucket.Name = proposedName
-		instance.Status.StorageBucket.Provisioned = false
+		instance.Status.GCP.StorageBucket.Name = proposedName
+		instance.Status.GCP.StorageBucket.Provisioned = false
 		return instance.StatusUpdate(reqLogger, d.KubeClient)
 
 	// We have a bucket name, but haven't kicked off provisioning of the bucket yet
-	case instance.Status.StorageBucket.Name != "" && !instance.Status.StorageBucket.Provisioned:
+	case instance.Status.GCP.StorageBucket.Name != "" && !instance.Status.GCP.StorageBucket.Provisioned:
 		bucketLog.Info("GCS bucket defined, but not provisioned")
 
 		// Create GCS bucket
 		bucketLog.Info("Creating GCS Bucket")
-		err = d.createBucket(gcsClient, instance.Status.StorageBucket.Name)
+		err = d.createBucket(gcsClient, instance.Status.GCP.StorageBucket.Name)
 		if err != nil {
-			return fmt.Errorf("error occurred when creating bucket %v: %v", instance.Status.StorageBucket.Name, err.Error())
+			return fmt.Errorf("error occurred when creating bucket %v: %v", instance.Status.GCP.StorageBucket.Name, err.Error())
 		}
 	}
 
 	// Verify GCS bucket exists
 	bucketLog.Info("Verifing GCS Bucket exists")
-	exists, err := d.StorageExists(instance.Status.StorageBucket.Name)
+	exists, err := d.StorageExists(instance.Status.GCP.StorageBucket.Name)
 	if err != nil {
-		return fmt.Errorf("error occurred when verifying bucket %v: %v", instance.Status.StorageBucket.Name, err.Error())
+		return fmt.Errorf("error occurred when verifying bucket %v: %v", instance.Status.GCP.StorageBucket.Name, err.Error())
 	}
 	if !exists {
 		bucketLog.Error(nil, "GCS bucket doesn't appear to exist")
-		instance.Status.StorageBucket.Provisioned = false
+		instance.Status.GCP.StorageBucket.Provisioned = false
 		return instance.StatusUpdate(reqLogger, d.KubeClient)
 	}
 
@@ -126,13 +126,13 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.
 
 	// Make sure that tags are applied to buckets
 	bucketLog.Info("Enforcing GCS Bucket tags on GCS Bucket")
-	err = d.enforceBucketLabels(gcsClient, instance.Status.StorageBucket.Name)
+	err = d.enforceBucketLabels(gcsClient, instance.Status.GCP.StorageBucket.Name)
 	if err != nil {
-		return fmt.Errorf("error occurred when tagging bucket %v: %v", instance.Status.StorageBucket.Name, err.Error())
+		return fmt.Errorf("error occurred when tagging bucket %v: %v", instance.Status.GCP.StorageBucket.Name, err.Error())
 	}
 
-	instance.Status.StorageBucket.Provisioned = true
-	instance.Status.StorageBucket.LastSyncTimestamp = &metav1.Time{
+	instance.Status.GCP.StorageBucket.Provisioned = true
+	instance.Status.GCP.StorageBucket.LastSyncTimestamp = &metav1.Time{
 		Time: time.Now(),
 	}
 	return instance.StatusUpdate(reqLogger, d.KubeClient)

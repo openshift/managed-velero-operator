@@ -11,9 +11,31 @@ type VeleroInstallSpec struct{}
 // VeleroInstallStatus defines the observed state of Velero
 // +k8s:openapi-gen=true
 type VeleroInstallStatus struct {
-	// StorageBucket contains details of the storage bucket for backups
+	// AWSVeleroInstallStatus contains status information specific to AWS
 	// +optional
-	StorageBucket StorageBucket `json:"storageBucket,omitempty"`
+	AWS *AWSVeleroInstallStatus `json:"AWS,omitempty"`
+	// AWSVeleroInstallStatus contains status information specific to GCP
+	// +optional
+	GCP *GCPVeleroInstallStatus `json:"GCP,omitempty"`
+	// AWSVeleroInstallStatus contains status information specific to Azure
+	// +optional
+	Azure *AzureVeleroInstallStatus `json:"Azure,omitempty"`
+}
+
+// AWSVeleroInstallStatus contains status information specific to AWS
+type AWSVeleroInstallStatus struct {
+	StorageBucket StorageBucket
+}
+
+// GCPVeleroInstallStatus contains status information specific to GCP
+type GCPVeleroInstallStatus struct {
+	StorageBucket StorageBucket
+}
+
+// AzureVeleroInstallStatus contains status information specific to Azure
+type AzureVeleroInstallStatus struct {
+	StorageAccount *string
+	StorageBucket  StorageBucket
 }
 
 // StorageBucket contains details of the storage bucket for backups

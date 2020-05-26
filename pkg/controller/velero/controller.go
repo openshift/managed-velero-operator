@@ -25,8 +25,8 @@ import (
 )
 
 var (
-	log               = logf.Log.WithName("controller_velero")
-	s3ReconcilePeriod = 60 * time.Minute
+	log                   = logf.Log.WithName("controller_velero")
+	bucketReconsilePeriod = 60 * time.Minute
 )
 
 // Add creates a new Velero Controller and adds it to the Manager. The Manager will set fields on the Controller
@@ -145,7 +145,7 @@ func (r *ReconcileVelero) Reconcile(request reconcile.Request) (reconcile.Result
 	}
 
 	// Check if bucket needs to be reconciled
-	if instance.StorageBucketReconcileRequired(s3ReconcilePeriod) {
+	if instance.StorageBucketReconcileRequired(infraStatus.PlatformStatus.Type, bucketReconsilePeriod) {
 		// Create storage using the storage driver
 		// Always return from this, as we will either be updating the status *or* there will be an error.
 		return reconcile.Result{}, r.driver.CreateStorage(reqLogger, instance)

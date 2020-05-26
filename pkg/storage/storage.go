@@ -7,9 +7,9 @@ import (
 	"github.com/go-logr/logr"
 	configv1 "github.com/openshift/api/config/v1"
 	veleroInstallCR "github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2"
+	"github.com/openshift/managed-velero-operator/pkg/storage/azureblobservice"
 	"github.com/openshift/managed-velero-operator/pkg/storage/gcs"
 	"github.com/openshift/managed-velero-operator/pkg/storage/s3"
-	"github.com/openshift/managed-velero-operator/pkg/storage/acs"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -44,9 +44,14 @@ func NewDriver(cfg *configv1.InfrastructureStatus, client client.Client) (Driver
 	case configv1.AzurePlatformType:
 		if cfg.PlatformStatus.Azure == nil ||
 			len(cfg.PlatformStatus.Azure.ResourceGroupName) < 1 {
-			return nil, fmt.Errorf("unable to determine Azure region")
+			return nil, fmt.Errorf("unable to determine Azure resource group name")
 		}
-		driver = acs.NewDriver(ctx, cfg, client)
+		var err error
+
+		driver, err = azureblobservice.NewDriver(ctx, cfg, client)
+		if err != nil {
+			return nil, err
+		}
 	default:
 		return nil, fmt.Errorf("unable to determine platform")
 	}

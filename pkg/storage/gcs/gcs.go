@@ -83,7 +83,16 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.
 
 		// Prepare to create a new bucket, if none exist.
 		proposedName := generateBucketName(storageConstants.StorageBucketPrefix)
-		proposedBucketExists, err := d.StorageExists(proposedName)
+		proposedBucketExists, err := d.StorageExists(
+			&veleroInstallCR.VeleroInstallStatus{
+				GCP: &veleroInstallCR.GCPVeleroInstallStatus{
+					StorageBucket: veleroInstallCR.StorageBucket{
+						Name: proposedName,
+					},
+				},
+			},
+		)
+
 		if err != nil {
 			return err
 		}
@@ -110,7 +119,7 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.
 
 	// Verify GCS bucket exists
 	bucketLog.Info("Verifing GCS Bucket exists")
-	exists, err := d.StorageExists(instance.Status.GCP.StorageBucket.Name)
+	exists, err := d.StorageExists(&instance.Status)
 	if err != nil {
 		return fmt.Errorf("error occurred when verifying bucket %v: %v", instance.Status.GCP.StorageBucket.Name, err.Error())
 	}
@@ -140,7 +149,7 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.
 }
 
 // StorageExists checks that the bucket exists, and that we have access to it.
-func (d *driver) StorageExists(bucketName string) (bool, error) {
+func (d *driver) StorageExists(status *veleroInstallCR.VeleroInstallStatus) (bool, error) {
 	var err error
 
 	//create an GCS Client
@@ -149,7 +158,7 @@ func (d *driver) StorageExists(bucketName string) (bool, error) {
 		return false, err
 	}
 
-	_, err = gcsClient.Bucket(bucketName).Attrs(context.TODO())
+	_, err = gcsClient.Bucket(status.GCP.StorageBucket.Name).Attrs(context.TODO())
 	if err != nil {
 		if err == gstorage.ErrBucketNotExist {
 			return false, nil

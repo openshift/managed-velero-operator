@@ -17,7 +17,7 @@ import (
 type Driver interface {
 	GetPlatformType() configv1.PlatformType
 	CreateStorage(logr.Logger, *veleroInstallCR.VeleroInstall) error
-	StorageExists(string) (bool, error)
+	StorageExists(*veleroInstallCR.VeleroInstallStatus) (bool, error)
 }
 
 //NewDriver will return a driver object

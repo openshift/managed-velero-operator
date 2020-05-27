@@ -11,11 +11,13 @@ import (
 	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	configv1 "github.com/openshift/api/config/v1"
 	minterv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
+	ccoAzure "github.com/openshift/cloud-credential-operator/pkg/azure"
 	velerov1 "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	v1 "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
 	veleroInstall "github.com/vmware-tanzu/velero/pkg/install"
 
 	endpoints "github.com/aws/aws-sdk-go/aws/endpoints"
@@ -34,12 +36,20 @@ const (
 	awsCredsSecretIDKey     = "aws_access_key_id"     // #nosec G101
 	awsCredsSecretAccessKey = "aws_secret_access_key" // #nosec G101
 
+	azureCredsSubscriptionIDKey = "AZURE_SUBSCRIPTION_ID" // #nosec G101
+	azureCredsTenantIDKey       = "AZURE_TENANT_ID"       // #nosec G101
+	azureCredsClientIDKey       = "AZURE_CLIENT_ID"       // #nosec G101
+	azureCredsClientSecretKey   = "AZURE_CLIENT_SECRET"   // #nosec G101
+	azureCredsResourceGroupKey  = "AZURE_RESOURCE_GROUP"  // #nosec G101
+	azureCredsCloudKey          = "AZURE_CLOUD_NAME"      // #nosec G101
+
 	veleroImageRegistry   = "docker.io/velero"
 	veleroImageRegistryCN = "registry.docker-cn.com/velero"
 
-	veleroImageTag    = "velero:v1.3.1"
-	veleroAwsImageTag = "velero-plugin-for-aws:v1.0.1"
-	veleroGcpImageTag = "velero-plugin-for-gcp:v1.0.1"
+	veleroImageTag      = "velero:v1.3.1"
+	veleroAwsImageTag   = "velero-plugin-for-aws:v1.0.1"
+	veleroGcpImageTag   = "velero-plugin-for-gcp:v1.0.1"
+	veleroAzureImageTag = "velero-plugin-for-microsoft-azure:v1.1.0"
 
 	credentialsRequestName = "velero-iam-credentials"
 )
@@ -50,24 +60,33 @@ var (
 
 func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace string, platformStatus *configv1.PlatformStatus, instance *veleroInstallCR.VeleroInstall) (reconcile.Result, error) {
 	var err error
-
+	var bsl *v1.BackupStorageLocation
 	var locationConfig map[string]string
+
+	provider := strings.ToLower(string(r.driver.GetPlatformType()))
+
 	switch r.driver.GetPlatformType() {
 	case configv1.AWSPlatformType:
 		locationConfig = map[string]string{
 			"region": platformStatus.AWS.Region,
 		}
+		bsl = veleroInstall.BackupStorageLocation(namespace, provider, instance.Status.AWS.StorageBucket.Name, "", locationConfig)
 	case configv1.GCPPlatformType:
 		// No region configuration needed for GCP
+		bsl = veleroInstall.BackupStorageLocation(namespace, provider, instance.Status.GCP.StorageBucket.Name, "", locationConfig)
+	case configv1.AzurePlatformType:
+		// No region configuration needed for Azure
+		locationConfig = map[string]string{
+			"resourceGroup":  platformStatus.Azure.ResourceGroupName,
+			"storageAccount": *instance.Status.Azure.StorageAccount,
+		}
+		bsl = veleroInstall.BackupStorageLocation(namespace, provider, instance.Status.Azure.StorageBucket.Name, "", locationConfig)
 	default:
 		return reconcile.Result{}, fmt.Errorf("unable to determine platform")
 	}
 
-	provider := strings.ToLower(string(r.driver.GetPlatformType()))
-
 	// Install BackupStorageLocation
 	foundBsl := &velerov1.BackupStorageLocation{}
-	bsl := veleroInstall.BackupStorageLocation(namespace, provider, instance.Status.StorageBucket.Name, "", locationConfig)
 	bslName, err := runtimeClient.ObjectKeyFromObject(bsl)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -138,9 +157,11 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 		if !ok {
 			return reconcile.Result{}, fmt.Errorf("no partition found for region %q", locationConfig["region"])
 		}
-		cr = awsCredentialsRequest(namespace, credentialsRequestName, partition.ID(), instance.Status.StorageBucket.Name)
+		cr = awsCredentialsRequest(namespace, credentialsRequestName, partition.ID(), instance.Status.AWS.StorageBucket.Name)
 	case configv1.GCPPlatformType:
 		cr = gcpCredentialsRequest(namespace, credentialsRequestName)
+	case configv1.AzurePlatformType:
+		cr = azureCredentialsRequest(namespace, credentialsRequestName)
 	default:
 		return reconcile.Result{}, fmt.Errorf("unable to determine platform")
 	}
@@ -338,6 +359,40 @@ func awsCredentialsRequest(namespace, name, partitionID, bucketName string) *min
 	}
 }
 
+func azureCredentialsRequest(namespace string, name string) *minterv1.CredentialsRequest {
+	codec, _ := minterv1.NewCodec()
+	provSpec, _ := codec.EncodeProviderSpec(
+		&minterv1.AzureProviderSpec{
+			TypeMeta: metav1.TypeMeta{
+				Kind: "AzureProviderSpec",
+			},
+			RoleBindings: []minterv1.RoleBinding{
+				{
+					Role: "Contributor",
+				},
+			},
+		},
+	)
+
+	return &minterv1.CredentialsRequest{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "CredentialsRequest",
+			APIVersion: minterv1.SchemeGroupVersion.String(),
+		},
+		Spec: minterv1.CredentialsRequestSpec{
+			SecretRef: corev1.ObjectReference{
+				Name:      name,
+				Namespace: namespace,
+			},
+			ProviderSpec: provSpec,
+		},
+	}
+}
+
 func gcpCredentialsRequest(namespace, name string) *minterv1.CredentialsRequest {
 	codec, _ := minterv1.NewCodec()
 	provSpec, _ := codec.EncodeProviderSpec(
@@ -381,12 +436,12 @@ func veleroDeployment(namespace string, platform configv1.PlatformType, veleroIm
 			veleroInstall.WithEnvFromSecretKey(strings.ToUpper(awsCredsSecretIDKey), credentialsRequestName, awsCredsSecretIDKey),
 			veleroInstall.WithEnvFromSecretKey(strings.ToUpper(awsCredsSecretAccessKey), credentialsRequestName, awsCredsSecretAccessKey),
 			veleroInstall.WithPlugins([]string{veleroImageRegistry + "/" + veleroAwsImageTag}),
-			veleroInstall.WithImage(veleroImageRegistry + "/" + veleroImageTag),
+			veleroInstall.WithImage(veleroImageRegistry+"/"+veleroImageTag),
 		)
 	case configv1.GCPPlatformType:
 		deployment = veleroInstall.Deployment(namespace,
 			veleroInstall.WithPlugins([]string{veleroImageRegistry + "/" + veleroGcpImageTag}),
-			veleroInstall.WithImage(veleroImageRegistry + "/" + veleroImageTag),
+			veleroInstall.WithImage(veleroImageRegistry+"/"+veleroImageTag),
 		)
 		defaultMode := int32(420)
 		deployment.Spec.Template.Spec.Volumes = append(
@@ -416,6 +471,16 @@ func veleroDeployment(namespace string, platform configv1.PlatformType, veleroIm
 				Value: "/credentials/service_account.json",
 			},
 		}...)
+	case configv1.AzurePlatformType:
+		deployment = veleroInstall.Deployment(namespace,
+			veleroInstall.WithEnvFromSecretKey(azureCredsSubscriptionIDKey, credentialsRequestName, ccoAzure.AzureClientID),
+			veleroInstall.WithEnvFromSecretKey(azureCredsTenantIDKey, credentialsRequestName, ccoAzure.AzureTenantID),
+			veleroInstall.WithEnvFromSecretKey(azureCredsClientIDKey, credentialsRequestName, ccoAzure.AzureClientID),
+			veleroInstall.WithEnvFromSecretKey(azureCredsClientSecretKey, credentialsRequestName, ccoAzure.AzureClientSecret),
+			veleroInstall.WithEnvFromSecretKey(azureCredsResourceGroupKey, credentialsRequestName, ccoAzure.AzureResourceGroup),
+			veleroInstall.WithPlugins([]string{veleroImageRegistry + "/" + veleroAzureImageTag}),
+			veleroInstall.WithImage(veleroImageRegistry+"/"+veleroImageTag),
+		)
 	}
 
 	replicas := int32(1)

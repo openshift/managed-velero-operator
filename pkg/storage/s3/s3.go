@@ -102,7 +102,7 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.
 
 	// Verify S3 bucket exists
 	bucketLog.Info("Verifing S3 Bucket exists")
-	exists, err := d.StorageExists(instance.Status.AWS.StorageBucket.Name)
+	exists, err := d.StorageExists(&instance.Status)
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok {
 			return fmt.Errorf("error occurred when verifying bucket %v: %v", instance.Status.AWS.StorageBucket.Name, aerr.Error())
@@ -161,7 +161,7 @@ func (d *driver) CreateStorage(reqLogger logr.Logger, instance *veleroInstallCR.
 }
 
 // StorageExists checks that the bucket exists, and that we have access to it.
-func (d *driver) StorageExists(bucketName string) (bool, error) {
+func (d *driver) StorageExists(status *veleroInstallCR.VeleroInstallStatus) (bool, error) {
 
 	//create an S3 Client
 	s3Client, err := NewS3Client(d.KubeClient, d.Config.Region)
@@ -170,7 +170,7 @@ func (d *driver) StorageExists(bucketName string) (bool, error) {
 	}
 
 	input := &s3.HeadBucketInput{
-		Bucket: aws.String(bucketName),
+		Bucket: aws.String(status.AWS.StorageBucket.Name),
 	}
 
 	_, err = s3Client.HeadBucket(input)
@@ -182,10 +182,10 @@ func (d *driver) StorageExists(bucketName string) (bool, error) {
 			case s3.ErrCodeNoSuchBucket, "NotFound":
 				return false, nil
 			default:
-				return false, fmt.Errorf("unable to determine bucket %v status: %v", bucketName, aerr.Error())
+				return false, fmt.Errorf("unable to determine bucket %v status: %v", status.AWS.StorageBucket.Name, aerr.Error())
 			}
 		} else {
-			return false, fmt.Errorf("unable to determine bucket %v status: %v", bucketName, aerr.Error())
+			return false, fmt.Errorf("unable to determine bucket %v status: %v", status.AWS.StorageBucket.Name, aerr.Error())
 		}
 	}
 

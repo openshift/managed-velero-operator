@@ -12,7 +12,7 @@ The Managed Velero Operator is used for backups in OpenShift Dedicated v4. It is
 ## What the Managed Velero Operator Does
 
 1. When the Managed Velero Operator starts, it checks whether it is installed on a supported platform. For OpenShift Dedicated v4 environment it validates that
-	+ it is installed on AWS or GCP
+	+ it is installed on AWS, Azure or GCP
 	+ it has been installed with installer provisioned infrastructure
 	+ it has all the needed details in the cluster's infrastructure configuration to provision Velero
 

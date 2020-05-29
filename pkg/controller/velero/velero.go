@@ -117,7 +117,7 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 
 	// Install VolumeSnapshotLocation
 	foundVsl := &velerov1.VolumeSnapshotLocation{}
-	vsl := veleroInstall.VolumeSnapshotLocation(namespace, provider, locationConfig)
+	vsl := veleroInstall.VolumeSnapshotLocation(namespace, provider, getVolumeSnapshotLocationConfig(r.driver.GetPlatformType(), locationConfig))
 	vslName, err := runtimeClient.ObjectKeyFromObject(vsl)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -296,6 +296,15 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 	}
 
 	return reconcile.Result{}, nil
+}
+
+func getVolumeSnapshotLocationConfig(platformType configv1.PlatformType, locationConfig map[string]string) map[string]string {
+	switch platformType {
+	case configv1.AzurePlatformType:
+		return map[string]string{"resourceGroup": locationConfig["resourceGroup"]}
+	}
+
+	return locationConfig
 }
 
 func awsCredentialsRequest(namespace, name, partitionID, bucketName string) *minterv1.CredentialsRequest {

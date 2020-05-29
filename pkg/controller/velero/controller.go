@@ -136,6 +136,9 @@ func (r *ReconcileVelero) Reconcile(request reconcile.Request) (reconcile.Result
 		return reconcile.Result{}, err
 	}
 
+	// Intialize platform specific status
+	instance.InitializeStatus(infraStatus.PlatformStatus.Type)
+
 	// Create the Storage Driver
 	if r.driver == nil {
 		r.driver, err = storage.NewDriver(infraStatus, r.client)

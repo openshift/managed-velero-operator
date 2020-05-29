@@ -1,6 +1,7 @@
 package v1alpha2
 
 import (
+	configv1 "github.com/openshift/api/config/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -12,30 +13,34 @@ type VeleroInstallSpec struct{}
 // +k8s:openapi-gen=true
 type VeleroInstallStatus struct {
 	// AWSVeleroInstallStatus contains status information specific to AWS
-	// +optional
 	AWS *AWSVeleroInstallStatus `json:"AWS,omitempty"`
 	// AWSVeleroInstallStatus contains status information specific to GCP
-	// +optional
 	GCP *GCPVeleroInstallStatus `json:"GCP,omitempty"`
 	// AWSVeleroInstallStatus contains status information specific to Azure
-	// +optional
 	Azure *AzureVeleroInstallStatus `json:"Azure,omitempty"`
 }
 
 // AWSVeleroInstallStatus contains status information specific to AWS
+// +k8s:openapi-gen=true
 type AWSVeleroInstallStatus struct {
-	StorageBucket StorageBucket
+	// StorageBucket contains details of the storage bucket for backups on AWS
+	StorageBucket StorageBucket `json:"storageBucket,omitempty"`
 }
 
 // GCPVeleroInstallStatus contains status information specific to GCP
+// +k8s:openapi-gen=true
 type GCPVeleroInstallStatus struct {
-	StorageBucket StorageBucket
+	// StorageBucket contains details of the storage bucket for backups on GCP
+	StorageBucket StorageBucket `json:"storageBucket,omitempty"`
 }
 
 // AzureVeleroInstallStatus contains status information specific to Azure
+// +k8s:openapi-gen=true
 type AzureVeleroInstallStatus struct {
-	StorageAccount *string
-	StorageBucket  StorageBucket
+	// StorageAccount contains details of the storage account for backups on Azure
+	StorageAccount string `json:"storageAccount,omitempty"`
+	// StorageBucket contains details of the storage bucket for backups on Azure
+	StorageBucket StorageBucket `json:"storageBucket,omitempty"`
 }
 
 // StorageBucket contains details of the storage bucket for backups
@@ -80,4 +85,22 @@ type VeleroInstallList struct {
 
 func init() {
 	SchemeBuilder.Register(&VeleroInstall{}, &VeleroInstallList{})
+}
+
+// InitializeStatus initializes veleroInstall status
+func (i *VeleroInstall) InitializeStatus(platform configv1.PlatformType) {
+	switch platform {
+	case configv1.AWSPlatformType:
+		if i.Status.AWS == nil {
+			i.Status.AWS = &AWSVeleroInstallStatus{}
+		}
+	case configv1.GCPPlatformType:
+		if i.Status.GCP == nil {
+			i.Status.GCP = &GCPVeleroInstallStatus{}
+		}
+	case configv1.AzurePlatformType:
+		if i.Status.Azure == nil {
+			i.Status.Azure = &AzureVeleroInstallStatus{}
+		}
+	}
 }

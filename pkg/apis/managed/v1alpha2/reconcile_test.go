@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	configv1 "github.com/openshift/api/config/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -63,18 +64,20 @@ func TestStorageBucketReconcileRequired(t *testing.T) {
 		instance := &VeleroInstall{
 			Spec: VeleroInstallSpec{},
 			Status: VeleroInstallStatus{
-				StorageBucket: StorageBucket{
-					Name:        tc.bucketName,
-					Provisioned: tc.bucketProvisioned,
+				Azure: &AzureVeleroInstallStatus{
+					StorageBucket: StorageBucket{
+						Name:        tc.bucketName,
+						Provisioned: tc.bucketProvisioned,
+					},
 				},
 			},
 		}
 
 		if !tc.timestamp.IsZero() {
-			instance.Status.StorageBucket.LastSyncTimestamp = &metav1.Time{Time: tc.timestamp}
+			instance.Status.Azure.StorageBucket.LastSyncTimestamp = &metav1.Time{Time: tc.timestamp}
 		}
 
-		reconcile := instance.StorageBucketReconcileRequired(tc.reconcilePeriod)
+		reconcile := instance.StorageBucketReconcileRequired(configv1.AzurePlatformType, tc.reconcilePeriod)
 
 		if reconcile != tc.shouldReconcile {
 			if tc.shouldReconcile {

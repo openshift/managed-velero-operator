@@ -34,7 +34,7 @@ func (i *VeleroInstall) StorageBucketReconcileRequired(platformType configv1.Pla
 			return true
 		}
 	case configv1.AzurePlatformType:
-		if *i.Status.Azure.StorageAccount == "" ||
+		if i.Status.Azure.StorageAccount == "" ||
 			i.Status.Azure.StorageBucket.Name == "" ||
 			!i.Status.Azure.StorageBucket.Provisioned ||
 			i.Status.Azure.StorageBucket.LastSyncTimestamp.IsZero() ||

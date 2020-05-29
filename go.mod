@@ -17,11 +17,13 @@ require (
 	cloud.google.com/go/storage v1.6.0
 	// TODO include relevant Azure golang dependecies
 	github.com/Azure/azure-sdk-for-go v42.3.0+incompatible
+	github.com/Azure/azure-storage-blob-go v0.8.0
 	github.com/Azure/go-autorest/autorest v0.10.2
 	github.com/Azure/go-autorest/autorest/azure/auth v0.4.2
 	github.com/Azure/go-autorest/autorest/to v0.3.1-0.20191028180845-3492b2aff503
 	github.com/cblecker/platformutils v0.0.0-20200321191645-443abe7fea11
 	github.com/coreos/prometheus-operator v0.38.0
+	github.com/dchest/uniuri v0.0.0-20200228104902-7aecb25e1fe5
 	github.com/googleapis/google-cloud-go-testing v0.0.0-20191008195207-8e1d251e947d
 	github.com/operator-framework/operator-sdk v0.17.1
 	github.com/spf13/pflag v1.0.5

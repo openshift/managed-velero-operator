@@ -75,10 +75,9 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 		// No region configuration needed for GCP
 		bsl = veleroInstall.BackupStorageLocation(namespace, provider, instance.Status.GCP.StorageBucket.Name, "", locationConfig)
 	case configv1.AzurePlatformType:
-		// No region configuration needed for Azure
 		locationConfig = map[string]string{
 			"resourceGroup":  platformStatus.Azure.ResourceGroupName,
-			"storageAccount": *instance.Status.Azure.StorageAccount,
+			"storageAccount": instance.Status.Azure.StorageAccount,
 		}
 		bsl = veleroInstall.BackupStorageLocation(namespace, provider, instance.Status.Azure.StorageBucket.Name, "", locationConfig)
 	default:
@@ -473,7 +472,7 @@ func veleroDeployment(namespace string, platform configv1.PlatformType, veleroIm
 		}...)
 	case configv1.AzurePlatformType:
 		deployment = veleroInstall.Deployment(namespace,
-			veleroInstall.WithEnvFromSecretKey(azureCredsSubscriptionIDKey, credentialsRequestName, ccoAzure.AzureClientID),
+			veleroInstall.WithEnvFromSecretKey(azureCredsSubscriptionIDKey, credentialsRequestName, ccoAzure.AzureSubscriptionID),
 			veleroInstall.WithEnvFromSecretKey(azureCredsTenantIDKey, credentialsRequestName, ccoAzure.AzureTenantID),
 			veleroInstall.WithEnvFromSecretKey(azureCredsClientIDKey, credentialsRequestName, ccoAzure.AzureClientID),
 			veleroInstall.WithEnvFromSecretKey(azureCredsClientSecretKey, credentialsRequestName, ccoAzure.AzureClientSecret),

@@ -46,26 +46,87 @@ spec:
         status:
           description: VeleroInstallStatus defines the observed state of Velero
           properties:
-            storageBucket:
-              description: StorageBucket contains details of the storage bucket for
-                backups
+            AWS:
+              description: AWSVeleroInstallStatus contains status information specific
+                to AWS
               properties:
-                lastSyncTimestamp:
-                  description: LastSyncTimestamp is the time that the bucket policy
-                    was last synced.
-                  format: date-time
+                storageBucket:
+                  description: StorageBucket contains details of the storage bucket
+                    for backups on AWS
+                  properties:
+                    lastSyncTimestamp:
+                      description: LastSyncTimestamp is the time that the bucket policy
+                        was last synced.
+                      format: date-time
+                      type: string
+                    name:
+                      description: Name is the name of the storage bucket created
+                        to store Velero backup details
+                      maxLength: 63
+                      type: string
+                    provisioned:
+                      description: Provisioned is true once the bucket has been initially
+                        provisioned.
+                      type: boolean
+                  required:
+                  - provisioned
+                  type: object
+              type: object
+            Azure:
+              description: AWSVeleroInstallStatus contains status information specific
+                to Azure
+              properties:
+                storageAccount:
+                  description: StorageAccount contains details of the storage account
+                    for backups on Azure
                   type: string
-                name:
-                  description: Name is the name of the storage bucket created to store
-                    Velero backup details
-                  maxLength: 63
-                  type: string
-                provisioned:
-                  description: Provisioned is true once the bucket has been initially
-                    provisioned.
-                  type: boolean
-              required:
-              - provisioned
+                storageBucket:
+                  description: StorageBucket contains details of the storage bucket
+                    for backups on Azure
+                  properties:
+                    lastSyncTimestamp:
+                      description: LastSyncTimestamp is the time that the bucket policy
+                        was last synced.
+                      format: date-time
+                      type: string
+                    name:
+                      description: Name is the name of the storage bucket created
+                        to store Velero backup details
+                      maxLength: 63
+                      type: string
+                    provisioned:
+                      description: Provisioned is true once the bucket has been initially
+                        provisioned.
+                      type: boolean
+                  required:
+                  - provisioned
+                  type: object
+              type: object
+            GCP:
+              description: AWSVeleroInstallStatus contains status information specific
+                to GCP
+              properties:
+                storageBucket:
+                  description: StorageBucket contains details of the storage bucket
+                    for backups on GCP
+                  properties:
+                    lastSyncTimestamp:
+                      description: LastSyncTimestamp is the time that the bucket policy
+                        was last synced.
+                      format: date-time
+                      type: string
+                    name:
+                      description: Name is the name of the storage bucket created
+                        to store Velero backup details
+                      maxLength: 63
+                      type: string
+                    provisioned:
+                      description: Provisioned is true once the bucket has been initially
+                        provisioned.
+                      type: boolean
+                  required:
+                  - provisioned
+                  type: object
               type: object
           type: object
       type: object

@@ -6,8 +6,8 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
 	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/dchest/uniuri"
 	"github.com/go-logr/logr"
-	"github.com/google/uuid"
 
 	veleroInstallCR "github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2"
 	storageConstants "github.com/openshift/managed-velero-operator/pkg/storage/constants"
@@ -16,23 +16,34 @@ import (
 func checkExistingStorageAccount(ctx context.Context, reqLogger logr.Logger, client *AzureClient) (storageAccount *storage.Account, err error) {
 	storageAccountList, err := client.storageAccountsClient.ListByResourceGroup(ctx, client.resourceGroupName)
 	if err != nil {
-		reqLogger.Error(err, "Error listing storage accounts")
-		return nil, err
+		return nil, fmt.Errorf("Error listing storage accounts. Error: %w", err)
 	}
+
+	var tagMatchesInfra, tagMatchesVelero bool
 
 	for _, item := range *storageAccountList.Value {
-		if *item.Tags[storageConstants.BucketTagBackupStorageLocation] == storageConstants.DefaultVeleroBackupStorageLocation &&
-			*item.Tags[storageConstants.BucketTagInfrastructureName] == client.infrastructureName {
-			return storageAccount, nil
+		tagMatchesVelero = false
+		tagMatchesInfra = false
+		for key, value := range item.Tags {
+			if key == storageConstants.AzureStorageAccountTagBackupLocation && value != nil &&
+				*value == storageConstants.DefaultVeleroBackupStorageLocation {
+				tagMatchesVelero = true
+			}
+			if key == storageConstants.AzureStorageAccountTagInfrastructureName && value != nil &&
+				*value == client.infrastructureName {
+				tagMatchesInfra = true
+			}
+		}
+		if tagMatchesVelero && tagMatchesInfra {
+			return &item, nil
 		}
 	}
-
 	return nil, nil
 }
 
-func createStorageAccount(ctx context.Context, client *AzureClient) (*storage.Account, error) {
+func createStorageAccount(ctx context.Context, client *AzureClient) (*string, error) {
 
-	proposedName := generateAccountName(storageConstants.StorageBucketPrefix)
+	proposedName := generateAccountName(storageConstants.AzureStorageAccountPrefix)
 
 	result, err := client.storageAccountsClient.CheckNameAvailability(ctx,
 		storage.AccountCheckNameAvailabilityParameters{
@@ -46,22 +57,26 @@ func createStorageAccount(ctx context.Context, client *AzureClient) (*storage.Ac
 	}
 
 	if *result.NameAvailable != true {
-		return nil, fmt.Errorf("storage account name not available: %v", err)
+		return nil, fmt.Errorf("storage account name not available: %v because : %v", proposedName, *result.Message)
 	}
 
 	future, err := client.storageAccountsClient.Create(
 		ctx,
 		client.resourceGroupName,
-		client.infrastructureName,
+		proposedName,
 		storage.AccountCreateParameters{
 			Sku: &storage.Sku{
-				Name: storage.StandardLRS,
+				Name: storage.StandardGRS,
 			},
-			Kind:                              storage.Storage,
-			AccountPropertiesCreateParameters: &storage.AccountPropertiesCreateParameters{},
+			Kind:     storage.BlobStorage,
+			Location: to.StringPtr(client.region),
+			AccountPropertiesCreateParameters: &storage.AccountPropertiesCreateParameters{
+				EnableHTTPSTrafficOnly: to.BoolPtr(true),
+				AccessTier:             storage.Hot,
+			},
 			Tags: map[string]*string{
-				storageConstants.BucketTagBackupStorageLocation: to.StringPtr(storageConstants.DefaultVeleroBackupStorageLocation),
-				storageConstants.BucketTagInfrastructureName:    &client.infrastructureName,
+				storageConstants.AzureStorageAccountTagBackupLocation:     to.StringPtr(storageConstants.DefaultVeleroBackupStorageLocation),
+				storageConstants.AzureStorageAccountTagInfrastructureName: &client.infrastructureName,
 			},
 		})
 
@@ -74,33 +89,64 @@ func createStorageAccount(ctx context.Context, client *AzureClient) (*storage.Ac
 	}
 
 	storageAccount, err := future.Result(client.storageAccountsClient)
-	return &storageAccount, err
+	return storageAccount.Name, err
 }
 
 func generateAccountName(prefix string) string {
-	id := uuid.New().String()
-	return prefix + id
+	return prefix + uniuri.NewLenChars(8, []byte("abcdefghijklmnopqrstuvwxyz0123456789"))
+}
+
+func getAccountKeys(ctx context.Context, client *AzureClient, storageAccountName string) (storage.AccountListKeysResult, error) {
+	return client.storageAccountsClient.ListKeys(ctx, client.resourceGroupName, storageAccountName, storage.Kerb)
+}
+
+func getAccountPrimaryKey(ctx context.Context, client *AzureClient, storageAccountName string) (string, error) {
+	response, err := getAccountKeys(ctx, client, storageAccountName)
+	if err != nil {
+		return "", err
+	}
+	return *(((*response.Keys)[0]).Value), nil
+}
+
+func getOrCreateStorageAccount(d *driver, reqLogger logr.Logger, instance *veleroInstallCR.VeleroInstall) (*string, error) {
+	storageAccount, err := checkExistingStorageAccount(d.Context, reqLogger, d.client)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if storageAccount != nil {
+		reqLogger.Info(fmt.Sprintf("Found existing storage account : %v", *storageAccount.Name))
+		return storageAccount.Name, nil
+	}
+
+	reqLogger.Info("Existing Storage account cannot be found. Creating new storage account")
+	return createStorageAccount(d.Context, d.client)
 }
 
 func getStorageAccount(ctx context.Context, client *AzureClient, storageAccountName string) (storage.Account, error) {
 	return client.storageAccountsClient.GetProperties(ctx, client.resourceGroupName, storageAccountName, "")
 }
 
-func setInstanceStorageAccount(d *driver, reqLogger logr.Logger, instance *veleroInstallCR.VeleroInstall) error {
-	storageAccount, err := checkExistingStorageAccount(d.Context, reqLogger, d.client)
+func reconcileStorageAccount(d *driver, reqLogger logr.Logger, storageAccountName string) error {
+	reqLogger.Info(fmt.Sprintf("Reconciling Storage Account : %v", storageAccountName))
+
+	_, err := d.client.storageAccountsClient.Update(
+		d.Context,
+		d.client.resourceGroupName,
+		storageAccountName,
+		storage.AccountUpdateParameters{
+			Sku: &storage.Sku{
+				Name: storage.StandardGRS,
+			},
+			AccountPropertiesUpdateParameters: &storage.AccountPropertiesUpdateParameters{
+				EnableHTTPSTrafficOnly: to.BoolPtr(true),
+				AccessTier:             storage.Hot,
+			},
+		},
+	)
 	if err != nil {
-		return err
+		return fmt.Errorf("Error reconciling storage account : %w", err)
 	}
-
-	if storageAccount == nil {
-		reqLogger.Info("Existing Storage account cannot be found. Creating new storage account")
-		storageAccount, err = createStorageAccount(d.Context, d.client)
-		if err != nil {
-			return err
-		}
-	}
-
-	instance.Status.Azure.StorageAccount = storageAccount.Name
-
 	return nil
 }

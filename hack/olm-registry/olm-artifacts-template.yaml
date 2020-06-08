@@ -84,7 +84,7 @@ objects:
           - effect: NoSchedule
             key: node-role.kubernetes.io/infra
             operator: Exists
-        displayName: RBAC Permissions Operator
+        displayName: Managed Velero Operator
         icon:
           base64data: ''
           mediatype: ''

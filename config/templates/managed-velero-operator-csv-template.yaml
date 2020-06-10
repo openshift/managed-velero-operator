@@ -39,6 +39,9 @@ spec:
       clusterPermissions:
       - serviceAccountName: managed-velero-operator
         # Rules will be added here by the generate-operator-bundle.py script.
+      permissions:
+      - serviceAccountName: managed-velero-operator
+        # Rules will be added here by the generate-operator-bundle.py script.
       deployments:
       - name: managed-velero-operator
         # Deployment spec will be added here by the generate-operator-bundle.py script.

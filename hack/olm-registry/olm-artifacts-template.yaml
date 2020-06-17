@@ -34,6 +34,23 @@ objects:
         name: openshift-velero
         labels:
           openshift.io/cluster-monitoring: 'true'
+    - apiVersion: v1
+      kind: ServiceAccount
+      metadata:
+      name: velero
+      namespace: openshift-velero
+    - kind: ClusterRoleBinding
+      apiVersion: rbac.authorization.k8s.io/v1
+      metadata:
+        name: velero
+      subjects:
+        - kind: ServiceAccount
+          name: velero
+          namespace: openshift-velero
+      roleRef:
+        kind: ClusterRole
+        name: cluster-admin
+        apiGroup: rbac.authorization.k8s.io
     - apiVersion: rbac.authorization.k8s.io/v1
       kind: Role
       metadata:
@@ -62,6 +79,49 @@ objects:
       - kind: ServiceAccount
         name: prometheus-k8s
         namespace: openshift-monitoring
+    - apiVersion: cloudcredential.openshift.io/v1
+      kind: CredentialsRequest
+      metadata:
+        name: managed-velero-operator-iam-credentials-aws
+        namespace: openshift-velero
+      spec:
+        secretRef:
+          name: managed-velero-operator-iam-credentials
+          namespace: openshift-velero
+        providerSpec:
+          apiVersion: cloudcredential.openshift.io/v1
+          kind: AWSProviderSpec
+          statementEntries:
+          - effect: Allow
+            action:
+            - s3:CreateBucket
+            - s3:DeleteObjectTagging
+            - s3:GetBucketLocation
+            - s3:GetBucketTagging
+            - s3:ListAllMyBuckets
+            - s3:ListBucket
+            - s3:PutBucketAcl
+            - s3:PutBucketPublicAccessBlock
+            - s3:PutBucketTagging
+            - s3:PutEncryptionConfiguration
+            - s3:PutLifecycleConfiguration
+            resource: "*"
+    - apiVersion: cloudcredential.openshift.io/v1
+      kind: CredentialsRequest
+      metadata:
+        name: managed-velero-operator-iam-credentials-gcp
+        namespace: openshift-velero
+      spec:
+        secretRef:
+          name: managed-velero-operator-iam-credentials
+          namespace: openshift-velero
+        providerSpec:
+          apiVersion: cloudcredential.openshift.io/v1
+          kind: GCPProviderSpec
+          predefinedRoles:
+          - roles/storage.admin
+          - roles/iam.serviceAccountUser
+          skipServiceCheck: true
     - apiVersion: operators.coreos.com/v1alpha1
       kind: CatalogSource
       metadata:

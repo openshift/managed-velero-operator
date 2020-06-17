@@ -9,7 +9,7 @@ metadata:
     description: Operator to manage installation of Velero for OpenShift Clusters.
     containerImage: quay.io/app-sre/managed-velero-operator:latest
     createdAt: "2019-04-10T17:34:33Z"
-    support: Christoph Blecker
+    support: Red Hat OpenShift SRE
 spec:
   displayName: managed-velero-operator
   description: Operator to manage installation of Velero for OpenShift Clusters.
@@ -32,7 +32,7 @@ spec:
   - type: MultiNamespace
     supported: false
   - type: AllNamespaces
-    supported: true
+    supported: false
   install:
     strategy: deployment
     spec:

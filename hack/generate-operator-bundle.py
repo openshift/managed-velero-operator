@@ -36,7 +36,7 @@ full_version = "%s.%s-%s" % (VERSION_BASE, git_num_commits, git_hash)
 print("Generating CSV for version: %s" % full_version)
 
 with open('config/templates/{}-csv-template.yaml'.format(OPERATOR_NAME), 'r') as stream:
-    csv = yaml.load(stream)
+    csv = yaml.safe_load(stream)
 
 if not os.path.exists(outdir):
     os.mkdir(outdir)
@@ -57,7 +57,7 @@ for file_name in crd_files:
         shutil.copy(full_path, os.path.join(version_dir, file_name))
     # Load CRD so we can use attributes from it
     with open("deploy/crds/{}".format(file_name), "r") as stream:
-        crd = yaml.load(stream)
+        crd = yaml.safe_load(stream)
     # Update CSV template customresourcedefinitions key
     csv['spec']['customresourcedefinitions']['owned'].append(
         {
@@ -68,6 +68,18 @@ for file_name in crd_files:
             "version": crd["spec"]["version"]
         }
     )
+
+csv['spec']['customresourcedefinitions']['required'] = []
+
+# Add CredentialRequest as a required CRD.
+csv['spec']['customresourcedefinitions']['required'].append(
+    {
+        "name": "credentialsrequests.cloudcredential.openshift.io",
+        "version": "v1",
+        "kind": "CredentialsRequest",
+        "displayName": "CredentialsRequest",
+        "description": "CredentialsRequest",
+    })
 
 # Copy all prometheus yaml files over to the bundle output dir:
 prom_files = [ f for f in os.listdir('deploy') if f.startswith('prometheus_') ]
@@ -81,7 +93,7 @@ csv['spec']['install']['spec']['clusterPermissions'] = []
 
 # Add operator clusterrole to the CSV:
 with open('deploy/cluster_role.yaml', 'r') as stream:
-    operator_role = yaml.load(stream)
+    operator_role = yaml.safe_load(stream)
     csv['spec']['install']['spec']['clusterPermissions'].append(
         {
             'rules': operator_role['rules'],
@@ -92,7 +104,7 @@ csv['spec']['install']['spec']['permissions'] = []
 
 # Add operator roles to the CSV:
 with open('deploy/role.yaml', 'r') as stream:
-    operator_role = yaml.load(stream)
+    operator_role = yaml.safe_load(stream)
     csv['spec']['install']['spec']['permissions'].append(
         {
             'rules': operator_role['rules'],
@@ -101,7 +113,7 @@ with open('deploy/role.yaml', 'r') as stream:
 
 # Add cluster_config_v1_reader role to the CSV:
 with open('deploy/cluster_config_v1_reader_role.yaml', 'r') as stream:
-    operator_role = yaml.load(stream)
+    operator_role = yaml.safe_load(stream)
     csv['spec']['install']['spec']['permissions'].append(
         {
             'rules': operator_role['rules'],
@@ -111,7 +123,7 @@ with open('deploy/cluster_config_v1_reader_role.yaml', 'r') as stream:
 # Add our deployment spec for the hive operator:
 with open('deploy/operator.yaml', 'r') as stream:
     operator_components = []
-    operator = yaml.load_all(stream)
+    operator = yaml.safe_load_all(stream)
     for doc in operator:
         operator_components.append(doc)
     # There is only one yaml document in the operator deployment

@@ -69,18 +69,6 @@ for file_name in crd_files:
         }
     )
 
-csv['spec']['customresourcedefinitions']['required'] = []
-
-# Add CredentialRequest as a required CRD.
-csv['spec']['customresourcedefinitions']['required'].append(
-    {
-        "name": "credentialsrequests.cloudcredential.openshift.io",
-        "version": "v1",
-        "kind": "CredentialsRequest",
-        "displayName": "CredentialsRequest",
-        "description": "CredentialsRequest",
-    })
-
 # Copy all prometheus yaml files over to the bundle output dir:
 prom_files = [ f for f in os.listdir('deploy') if f.startswith('prometheus_') ]
 for file_name in prom_files:

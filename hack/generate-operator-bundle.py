@@ -136,7 +136,9 @@ csv['spec']['install']['spec']['deployments'][0]['spec']['template']['spec']['co
 # Update the versions to include git hash:
 csv['metadata']['name'] = "{}.v{}".format(OPERATOR_NAME, full_version)
 csv['spec']['version'] = full_version
-csv['spec']['replaces'] = "{}.v{}".format(OPERATOR_NAME, prev_version)
+# Only include "replaces" field if a previous version was provided
+if prev_version:
+    csv['spec']['replaces'] = "{}.v{}".format(OPERATOR_NAME, prev_version)
 
 # Set the CSV createdAt annotation:
 now = datetime.datetime.now()

@@ -37,8 +37,8 @@ objects:
     - apiVersion: v1
       kind: ServiceAccount
       metadata:
-      name: velero
-      namespace: openshift-velero
+        name: velero
+        namespace: openshift-velero
     - kind: ClusterRoleBinding
       apiVersion: rbac.authorization.k8s.io/v1
       metadata:

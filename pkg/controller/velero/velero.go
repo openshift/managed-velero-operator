@@ -382,12 +382,12 @@ func veleroDeployment(namespace string, platform configv1.PlatformType, veleroIm
 			veleroInstall.WithEnvFromSecretKey(strings.ToUpper(awsCredsSecretIDKey), credentialsRequestName, awsCredsSecretIDKey),
 			veleroInstall.WithEnvFromSecretKey(strings.ToUpper(awsCredsSecretAccessKey), credentialsRequestName, awsCredsSecretAccessKey),
 			veleroInstall.WithPlugins([]string{veleroImageRegistry + "/" + veleroAwsImageTag}),
-			veleroInstall.WithImage(veleroImageRegistry + "/" + veleroImageTag),
+			veleroInstall.WithImage(veleroImageRegistry+"/"+veleroImageTag),
 		)
 	case configv1.GCPPlatformType:
 		deployment = veleroInstall.Deployment(namespace,
 			veleroInstall.WithPlugins([]string{veleroImageRegistry + "/" + veleroGcpImageTag}),
-			veleroInstall.WithImage(veleroImageRegistry + "/" + veleroImageTag),
+			veleroInstall.WithImage(veleroImageRegistry+"/"+veleroImageTag),
 		)
 		defaultMode := int32(420)
 		deployment.Spec.Template.Spec.Volumes = append(

@@ -67,7 +67,8 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 
 	// Install BackupStorageLocation
 	foundBsl := &velerov1.BackupStorageLocation{}
-	bsl := veleroInstall.BackupStorageLocation(namespace, provider, instance.Status.StorageBucket.Name, "", locationConfig)
+	var caCertData []byte
+	bsl := veleroInstall.BackupStorageLocation(namespace, provider, instance.Status.StorageBucket.Name, "", locationConfig, caCertData)
 	bslName, err := runtimeClient.ObjectKeyFromObject(bsl)
 	if err != nil {
 		return reconcile.Result{}, err

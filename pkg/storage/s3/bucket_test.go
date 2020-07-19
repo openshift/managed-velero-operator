@@ -421,7 +421,7 @@ func TestListBucketTags(t *testing.T) {
 				},
 			},
 			want: map[string][]*s3.Tag{
-				"testBucket": []*s3.Tag{
+				"testBucket": {
 					{
 						Key:   aws.String(bucketTagBackupLocation),
 						Value: aws.String(storageConstants.DefaultVeleroBackupStorageLocation),
@@ -445,7 +445,7 @@ func TestListBucketTags(t *testing.T) {
 				},
 			},
 			want: map[string][]*s3.Tag{
-				"nonTaggedBucket": []*s3.Tag{},
+				"nonTaggedBucket": {},
 			},
 			wantErr: false,
 		},

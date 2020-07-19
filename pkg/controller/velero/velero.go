@@ -37,9 +37,9 @@ const (
 	veleroImageRegistry   = "docker.io/velero"
 	veleroImageRegistryCN = "registry.docker-cn.com/velero"
 
-	veleroImageTag    = "velero:v1.3.1"
-	veleroAwsImageTag = "velero-plugin-for-aws:v1.0.1"
-	veleroGcpImageTag = "velero-plugin-for-gcp:v1.0.1"
+	veleroImageTag    = "velero:v1.4.2"
+	veleroAwsImageTag = "velero-plugin-for-aws:v1.1.0"
+	veleroGcpImageTag = "velero-plugin-for-gcp:v1.1.0"
 
 	credentialsRequestName = "velero-iam-credentials"
 )
@@ -67,7 +67,8 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 
 	// Install BackupStorageLocation
 	foundBsl := &velerov1.BackupStorageLocation{}
-	bsl := veleroInstall.BackupStorageLocation(namespace, provider, instance.Status.StorageBucket.Name, "", locationConfig)
+	var caCertData []byte
+	bsl := veleroInstall.BackupStorageLocation(namespace, provider, instance.Status.StorageBucket.Name, "", locationConfig, caCertData)
 	bslName, err := runtimeClient.ObjectKeyFromObject(bsl)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -381,12 +382,12 @@ func veleroDeployment(namespace string, platform configv1.PlatformType, veleroIm
 			veleroInstall.WithEnvFromSecretKey(strings.ToUpper(awsCredsSecretIDKey), credentialsRequestName, awsCredsSecretIDKey),
 			veleroInstall.WithEnvFromSecretKey(strings.ToUpper(awsCredsSecretAccessKey), credentialsRequestName, awsCredsSecretAccessKey),
 			veleroInstall.WithPlugins([]string{veleroImageRegistry + "/" + veleroAwsImageTag}),
-			veleroInstall.WithImage(veleroImageRegistry + "/" + veleroImageTag),
+			veleroInstall.WithImage(veleroImageRegistry+"/"+veleroImageTag),
 		)
 	case configv1.GCPPlatformType:
 		deployment = veleroInstall.Deployment(namespace,
 			veleroInstall.WithPlugins([]string{veleroImageRegistry + "/" + veleroGcpImageTag}),
-			veleroInstall.WithImage(veleroImageRegistry + "/" + veleroImageTag),
+			veleroInstall.WithImage(veleroImageRegistry+"/"+veleroImageTag),
 		)
 		defaultMode := int32(420)
 		deployment.Spec.Template.Spec.Volumes = append(

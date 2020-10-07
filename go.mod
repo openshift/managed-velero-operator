@@ -15,9 +15,9 @@ require (
 require (
 	cloud.google.com/go/storage v1.12.0
 	github.com/cblecker/platformutils v0.0.0-20200321191645-443abe7fea11
-	github.com/coreos/prometheus-operator v0.38.0
 	github.com/googleapis/google-cloud-go-testing v0.0.0-20191008195207-8e1d251e947d
-	github.com/operator-framework/operator-sdk v0.17.1
+	github.com/operator-framework/operator-sdk v0.18.2
+	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.42.1
 	github.com/spf13/pflag v1.0.5
 	golang.org/x/oauth2 v0.0.0-20200902213428-5d25da1a8d43
 	google.golang.org/api v0.32.0
@@ -29,10 +29,7 @@ require (
 	sigs.k8s.io/controller-runtime v0.6.3
 )
 
-replace (
-	github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.3.2+incompatible // Required by OLM
-	k8s.io/client-go => k8s.io/client-go v0.18.8 // Required by prometheus-operator
-)
+replace github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.3.2+incompatible // Required by OLM
 
 replace ( // Required by velero
 	k8s.io/api => k8s.io/api v0.18.8
@@ -40,6 +37,7 @@ replace ( // Required by velero
 	k8s.io/apimachinery => k8s.io/apimachinery v0.18.8
 	k8s.io/apiserver => k8s.io/apiserver v0.18.8
 	k8s.io/cli-runtime => k8s.io/cli-runtime v0.18.8
+	k8s.io/client-go => k8s.io/client-go v0.18.8
 	k8s.io/cloud-provider => k8s.io/cloud-provider v0.18.8
 	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.18.8
 	k8s.io/code-generator => k8s.io/code-generator v0.18.8

@@ -3,25 +3,24 @@ module github.com/openshift/managed-velero-operator
 go 1.13
 
 require (
-	github.com/aws/aws-sdk-go v1.30.29
+	github.com/aws/aws-sdk-go v1.35.5
 	github.com/go-logr/logr v0.1.0
-	github.com/go-openapi/spec v0.19.8
-	github.com/google/uuid v1.1.1
+	github.com/go-openapi/spec v0.19.9
+	github.com/google/uuid v1.1.2
 	github.com/openshift/api v0.0.0-20200917102736-0a191b5b9bb0
 	github.com/openshift/cloud-credential-operator v0.0.0-20200926024851-4ef74fd4ae81
 	github.com/vmware-tanzu/velero v1.5.1
 )
 
 require (
-	cloud.google.com/go v0.57.0 // indirect
-	cloud.google.com/go/storage v1.6.0
+	cloud.google.com/go/storage v1.12.0
 	github.com/cblecker/platformutils v0.0.0-20200321191645-443abe7fea11
 	github.com/coreos/prometheus-operator v0.38.0
 	github.com/googleapis/google-cloud-go-testing v0.0.0-20191008195207-8e1d251e947d
 	github.com/operator-framework/operator-sdk v0.17.1
 	github.com/spf13/pflag v1.0.5
-	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
-	google.golang.org/api v0.22.0
+	golang.org/x/oauth2 v0.0.0-20200902213428-5d25da1a8d43
+	google.golang.org/api v0.32.0
 	k8s.io/api v0.18.8
 	k8s.io/apiextensions-apiserver v0.18.8
 	k8s.io/apimachinery v0.18.8

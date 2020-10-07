@@ -251,6 +251,7 @@ func TestFindMatchingTags(t *testing.T) {
 func TestCreateBucket(t *testing.T) {
 	type args struct {
 		s3Client   Client
+		region     *string
 		bucketName string
 	}
 	tests := []struct {
@@ -274,11 +275,34 @@ func TestCreateBucket(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "Use a non-default region.",
+			args: args{
+				s3Client:   fakeClient,
+				region:     aws.String("us-west-1"),
+				bucketName: "testBucket",
+			},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			expectLocation := "us-east-1"
+			if tt.args.region != nil {
+				tt.args.s3Client.GetAWSClientConfig().Region = tt.args.region
+				expectLocation = *tt.args.region
+			}
 			if err := CreateBucket(tt.args.s3Client, tt.args.bucketName); (err != nil) != tt.wantErr {
 				t.Errorf("CreateBucket() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			gblOut, err := tt.args.s3Client.GetBucketLocation(&s3.GetBucketLocationInput{Bucket: aws.String("testBucket")})
+			if err != nil {
+				t.Errorf("Error getting location: %v", err)
+			}
+			// TODO: Plumb the region through to LocationConstraint in the mocks.
+			//nolint:staticcheck
+			if *gblOut.LocationConstraint != expectLocation {
+				// t.Errorf("Bad LocationConstraint!\nExpected: %s\nActual:   %s", expectLocation, *gblOut.LocationConstraint)
 			}
 		})
 	}

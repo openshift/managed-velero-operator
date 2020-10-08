@@ -582,7 +582,7 @@ func credentialsRequestSpecEqual(x, y minterv1.CredentialsRequestSpec) (bool, er
 	return true, nil
 }
 
-// GenerateServiceMonitor generates a prometheus-operator ServiceMonitor object
+// generateServiceMonitor generates a prometheus-operator ServiceMonitor object
 // based on the passed Service object.
 func generateServiceMonitor(s *corev1.Service) *monitoringv1.ServiceMonitor {
 	labels := make(map[string]string)

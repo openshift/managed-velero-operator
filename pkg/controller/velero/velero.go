@@ -8,9 +8,9 @@ import (
 
 	veleroInstallCR "github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2"
 
-	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	configv1 "github.com/openshift/api/config/v1"
 	minterv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	velerov1 "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -20,7 +20,6 @@ import (
 
 	endpoints "github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/go-logr/logr"
-	"github.com/operator-framework/operator-sdk/pkg/metrics"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -37,7 +36,7 @@ const (
 	veleroImageRegistry   = "docker.io/velero"
 	veleroImageRegistryCN = "registry.docker-cn.com/velero"
 
-	veleroImageTag    = "velero:v1.4.2"
+	veleroImageTag    = "velero:v1.5.1"
 	veleroAwsImageTag = "velero-plugin-for-aws:v1.1.0"
 	veleroGcpImageTag = "velero-plugin-for-gcp:v1.1.0"
 
@@ -248,7 +247,7 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 
 	// Install Metrics ServiceMonitor
 	foundServiceMonitor := &monitoringv1.ServiceMonitor{}
-	serviceMonitor := metrics.GenerateServiceMonitor(foundService)
+	serviceMonitor := generateServiceMonitor(foundService)
 	serviceMonitorName, err := runtimeClient.ObjectKeyFromObject(serviceMonitor)
 	if err != nil {
 		return reconcile.Result{}, err
@@ -257,7 +256,7 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 		if errors.IsNotFound(err) {
 			// Didn't find ServiceMonitor
 			reqLogger.Info("Creating ServiceMonitor")
-			// Note, GenerateServiceMonitor already set an owner reference.
+			// Note, generateServiceMonitor already set an owner reference.
 			if err = r.client.Create(context.TODO(), serviceMonitor); err != nil {
 				return reconcile.Result{}, err
 			}
@@ -581,4 +580,47 @@ func credentialsRequestSpecEqual(x, y minterv1.CredentialsRequestSpec) (bool, er
 	}
 
 	return true, nil
+}
+
+// generateServiceMonitor generates a prometheus-operator ServiceMonitor object
+// based on the passed Service object.
+func generateServiceMonitor(s *corev1.Service) *monitoringv1.ServiceMonitor {
+	labels := make(map[string]string)
+	for k, v := range s.ObjectMeta.Labels {
+		labels[k] = v
+	}
+	endpoints := populateEndpointsFromServicePorts(s)
+	boolTrue := true
+
+	return &monitoringv1.ServiceMonitor{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      s.ObjectMeta.Name,
+			Namespace: s.ObjectMeta.Namespace,
+			Labels:    labels,
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion:         "v1",
+					BlockOwnerDeletion: &boolTrue,
+					Controller:         &boolTrue,
+					Kind:               "Service",
+					Name:               s.Name,
+					UID:                s.UID,
+				},
+			},
+		},
+		Spec: monitoringv1.ServiceMonitorSpec{
+			Selector: metav1.LabelSelector{
+				MatchLabels: labels,
+			},
+			Endpoints: endpoints,
+		},
+	}
+}
+
+func populateEndpointsFromServicePorts(s *corev1.Service) []monitoringv1.Endpoint {
+	var endpoints []monitoringv1.Endpoint
+	for _, port := range s.Spec.Ports {
+		endpoints = append(endpoints, monitoringv1.Endpoint{Port: port.Name})
+	}
+	return endpoints
 }

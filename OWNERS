@@ -1,10 +1,11 @@
-approvers:
-- sre-platform-leads
-- cblecker
-- mwoodson
-- wanghaoran1988
-- dofinn
-- NautiluX
 reviewers:
+ - cblecker
+ - mbarnes
+ - luis-falcon
+ - yithian
+approvers:
 - cblecker
-- mwoodson
+- mbarnes
+- luis-falcon
+maintainers:
+- cblecker

@@ -36,7 +36,7 @@ const (
 	veleroImageRegistry   = "docker.io/velero"
 	veleroImageRegistryCN = "registry.docker-cn.com/velero"
 
-	veleroImageTag    = "velero:v1.5.1"
+	veleroImageTag    = "velero:v1.5.2"
 	veleroAwsImageTag = "velero-plugin-for-aws:v1.1.0"
 	veleroGcpImageTag = "velero-plugin-for-gcp:v1.1.0"
 

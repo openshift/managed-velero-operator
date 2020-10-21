@@ -9,7 +9,7 @@ require (
 	github.com/google/uuid v1.1.2
 	github.com/openshift/api v0.0.0-20200917102736-0a191b5b9bb0
 	github.com/openshift/cloud-credential-operator v0.0.0-20200926024851-4ef74fd4ae81
-	github.com/vmware-tanzu/velero v1.5.1
+	github.com/vmware-tanzu/velero v1.5.2
 )
 
 require (

@@ -37,6 +37,7 @@ func schema_pkg_apis_managed_v1alpha2_StorageBucket(ref common.ReferenceCallback
 					"provisioned": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Provisioned is true once the bucket has been initially provisioned.",
+							Default:     false,
 							Type:        []string{"boolean"},
 							Format:      "",
 						},
@@ -79,17 +80,20 @@ func schema_pkg_apis_managed_v1alpha2_VeleroInstall(ref common.ReferenceCallback
 					},
 					"metadata": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
+							Default: map[string]interface{}{},
+							Ref:     ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
 						},
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2.VeleroInstallSpec"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2.VeleroInstallSpec"),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2.VeleroInstallStatus"),
+							Default: map[string]interface{}{},
+							Ref:     ref("github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2.VeleroInstallStatus"),
 						},
 					},
 				},
@@ -121,6 +125,7 @@ func schema_pkg_apis_managed_v1alpha2_VeleroInstallStatus(ref common.ReferenceCa
 					"storageBucket": {
 						SchemaProps: spec.SchemaProps{
 							Description: "StorageBucket contains details of the storage bucket for backups",
+							Default:     map[string]interface{}{},
 							Ref:         ref("github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2.StorageBucket"),
 						},
 					},

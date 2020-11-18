@@ -1,3 +1,5 @@
+include boilerplate/generated-includes.mk
+
 SHELL := /usr/bin/env bash
 
 OPERATOR_DOCKERFILE = ./build/Dockerfile
@@ -24,3 +26,7 @@ generate:
 		-p ./pkg/apis/managed/v1alpha2 \
 		-h /dev/null \
 		-r "-"
+
+.PHONY: boilerplate-update
+boilerplate-update:
+	@boilerplate/update

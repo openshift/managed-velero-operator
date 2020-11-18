@@ -1,24 +1,17 @@
+# This must come before the boilerplate includes, which otherwise
+# default the version.
+VERSION_MINOR?=2
+
 include boilerplate/generated-includes.mk
 
-SHELL := /usr/bin/env bash
+# >> TEMPORARY >>
+# Remove this section once boilerplate covers openapi-gen.
+# Boilerplate doesn't know how to openapi-gen yet. We'll provide a
+# target for that step, and override `generate` to include it.
 
-OPERATOR_DOCKERFILE = ./build/Dockerfile
-
-# Include shared Makefiles
-include project.mk
-include standard.mk
-
-default: gobuild
-
-# Extend Makefile after here
-
-.PHONY: docker-build
-docker-build: build
-
-.PHONY: generate
-generate:
-	operator-sdk generate k8s
-	operator-sdk generate crds
+.PHONY: openapi-generate
+openapi-generate:
+	go get k8s.io/code-generator/cmd/openapi-gen@v0.19.4
 	openapi-gen --logtostderr=true \
 		-i ./pkg/apis/managed/v1alpha2 \
 		-o "" \
@@ -26,6 +19,10 @@ generate:
 		-p ./pkg/apis/managed/v1alpha2 \
 		-h /dev/null \
 		-r "-"
+
+generate: op-generate openapi-generate go-generate
+
+# << TEMPORARY <<
 
 .PHONY: boilerplate-update
 boilerplate-update:

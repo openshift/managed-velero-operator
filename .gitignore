@@ -63,6 +63,7 @@ anaconda-mode/
 *.out
 *.tmp
 ### Vim ###
+*.orig
 # swap
 .sw[a-p]
 .*.sw[a-p]
@@ -76,3 +77,6 @@ tags
 .vscode/*
 .history
 # End of https://www.gitignore.io/api/go,vim,emacs,visualstudiocode
+### Boilerplate ###
+.operator-sdk/*
+.venv/*

@@ -13,10 +13,10 @@ import (
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
-		"./pkg/apis/managed/v1alpha2.StorageBucket":       schema_pkg_apis_managed_v1alpha2_StorageBucket(ref),
-		"./pkg/apis/managed/v1alpha2.VeleroInstall":       schema_pkg_apis_managed_v1alpha2_VeleroInstall(ref),
-		"./pkg/apis/managed/v1alpha2.VeleroInstallSpec":   schema_pkg_apis_managed_v1alpha2_VeleroInstallSpec(ref),
-		"./pkg/apis/managed/v1alpha2.VeleroInstallStatus": schema_pkg_apis_managed_v1alpha2_VeleroInstallStatus(ref),
+		"github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2.StorageBucket":       schema_pkg_apis_managed_v1alpha2_StorageBucket(ref),
+		"github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2.VeleroInstall":       schema_pkg_apis_managed_v1alpha2_VeleroInstall(ref),
+		"github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2.VeleroInstallSpec":   schema_pkg_apis_managed_v1alpha2_VeleroInstallSpec(ref),
+		"github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2.VeleroInstallStatus": schema_pkg_apis_managed_v1alpha2_VeleroInstallStatus(ref),
 	}
 }
 
@@ -84,19 +84,19 @@ func schema_pkg_apis_managed_v1alpha2_VeleroInstall(ref common.ReferenceCallback
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("./pkg/apis/managed/v1alpha2.VeleroInstallSpec"),
+							Ref: ref("github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2.VeleroInstallSpec"),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("./pkg/apis/managed/v1alpha2.VeleroInstallStatus"),
+							Ref: ref("github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2.VeleroInstallStatus"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/managed/v1alpha2.VeleroInstallSpec", "./pkg/apis/managed/v1alpha2.VeleroInstallStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2.VeleroInstallSpec", "github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2.VeleroInstallStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 
@@ -121,13 +121,13 @@ func schema_pkg_apis_managed_v1alpha2_VeleroInstallStatus(ref common.ReferenceCa
 					"storageBucket": {
 						SchemaProps: spec.SchemaProps{
 							Description: "StorageBucket contains details of the storage bucket for backups",
-							Ref:         ref("./pkg/apis/managed/v1alpha2.StorageBucket"),
+							Ref:         ref("github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2.StorageBucket"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/managed/v1alpha2.StorageBucket"},
+			"github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2.StorageBucket"},
 	}
 }

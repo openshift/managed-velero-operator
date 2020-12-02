@@ -24,12 +24,6 @@ generate: op-generate openapi-generate go-generate
 
 # << TEMPORARY <<
 
-# >> TEMPORARY >>
-# Remove this section once prow configuration is standardized.
-.PHONY: verify
-verify: lint
-# << TEMPORARY <<
-
 .PHONY: boilerplate-update
 boilerplate-update:
 	@boilerplate/update

@@ -17,6 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	veleroInstall "github.com/vmware-tanzu/velero/pkg/install"
+	velerokubeutil "github.com/vmware-tanzu/velero/pkg/util/kube"
 
 	endpoints "github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/go-logr/logr"
@@ -375,16 +376,20 @@ func gcpCredentialsRequest(namespace, name string) *minterv1.CredentialsRequest 
 func veleroDeployment(namespace string, platform configv1.PlatformType, veleroImageRegistry string) *appsv1.Deployment {
 	var deployment *appsv1.Deployment
 
+	veleroPodResources, _ := velerokubeutil.ParseResourceRequirements(veleroInstall.DefaultVeleroPodCPURequest, veleroInstall.DefaultVeleroPodMemRequest, veleroInstall.DefaultVeleroPodCPULimit, veleroInstall.DefaultVeleroPodMemLimit)
+
 	switch platform {
 	case configv1.AWSPlatformType:
 		deployment = veleroInstall.Deployment(namespace,
 			veleroInstall.WithEnvFromSecretKey(strings.ToUpper(awsCredsSecretIDKey), credentialsRequestName, awsCredsSecretIDKey),
 			veleroInstall.WithEnvFromSecretKey(strings.ToUpper(awsCredsSecretAccessKey), credentialsRequestName, awsCredsSecretAccessKey),
+			veleroInstall.WithResources(veleroPodResources),
 			veleroInstall.WithPlugins([]string{veleroImageRegistry + "/" + veleroAwsImageTag}),
 			veleroInstall.WithImage(veleroImageRegistry+"/"+veleroImageTag),
 		)
 	case configv1.GCPPlatformType:
 		deployment = veleroInstall.Deployment(namespace,
+			veleroInstall.WithResources(veleroPodResources),
 			veleroInstall.WithPlugins([]string{veleroImageRegistry + "/" + veleroGcpImageTag}),
 			veleroInstall.WithImage(veleroImageRegistry+"/"+veleroImageTag),
 		)

@@ -9,7 +9,7 @@ require (
 	github.com/google/uuid v1.1.2
 	github.com/openshift/api v0.0.0-20200917102736-0a191b5b9bb0
 	github.com/openshift/cloud-credential-operator v0.0.0-20200926024851-4ef74fd4ae81
-	github.com/vmware-tanzu/velero v1.5.2
+	github.com/vmware-tanzu/velero v1.5.3
 )
 
 require (
@@ -25,7 +25,6 @@ require (
 	k8s.io/apiextensions-apiserver v0.18.8
 	k8s.io/apimachinery v0.18.8
 	k8s.io/client-go v12.0.0+incompatible
-	k8s.io/code-generator v0.19.4 // indirect
 	k8s.io/kube-openapi v0.0.0-20200410145947-61e04a5be9a6
 	sigs.k8s.io/controller-runtime v0.6.3
 )

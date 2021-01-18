@@ -21,7 +21,7 @@ objects:
   kind: SelectorSyncSet
   metadata:
     annotations:
-      component-display-name: Managed Velero Operator
+      component-display-name: ${DISPLAY_NAME}
       component-name: ${REPO_NAME}
       telemeter-query: csv_succeeded{_id="$CLUSTER_ID",name=~"${REPO_NAME}.*",exported_namespace=~"openshift-.*",namespace="openshift-operator-lifecycle-manager"} == 1
     labels:

@@ -1,11 +1,9 @@
 reviewers:
  - cblecker
- - mbarnes
  - luis-falcon
  - yithian
 approvers:
 - cblecker
-- mbarnes
 - luis-falcon
 maintainers:
 - cblecker

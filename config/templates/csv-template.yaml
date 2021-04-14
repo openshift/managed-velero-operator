@@ -2,7 +2,7 @@ apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
   name: managed-velero-operator-0.0.1
-  namespace: placeholder
+  namespace: openshift-velero
   annotations:
     categories: A list of comma separated categories that your operator falls under.
     certified: "false"
@@ -36,14 +36,7 @@ spec:
   install:
     strategy: deployment
     spec:
-      clusterPermissions:
-      - serviceAccountName: managed-velero-operator
-        # Rules will be added here by the generate-operator-bundle.py script.
-      permissions:
-      - serviceAccountName: managed-velero-operator
-        # Rules will be added here by the generate-operator-bundle.py script.
-      deployments:
-      - name: managed-velero-operator
-        # Deployment spec will be added here by the generate-operator-bundle.py script.
+      clusterPermissions: []
+      permissions: []
   customresourcedefinitions:
     owned:

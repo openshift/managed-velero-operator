@@ -80,3 +80,6 @@ tags
 ### Boilerplate ###
 .operator-sdk/*
 .venv/*
+
+# Local docker configuration
+.docker/*

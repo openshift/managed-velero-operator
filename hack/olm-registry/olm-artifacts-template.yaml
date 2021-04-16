@@ -8,6 +8,8 @@ parameters:
   required: true
 - name: IMAGE_TAG
   required: true
+- name: REPO_DIGEST
+  required: true
 - name: REPO_NAME
   value: managed-velero-operator
   required: true
@@ -138,7 +140,7 @@ objects:
         name: managed-velero-operator-registry
         namespace: openshift-velero
       spec:
-        image: ${REGISTRY_IMG}:${CHANNEL}-${IMAGE_TAG}
+        image: ${REPO_DIGEST}
         affinity:
           nodeAffinity:
             preferredDuringSchedulingIgnoredDuringExecution:

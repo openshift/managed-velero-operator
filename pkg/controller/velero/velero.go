@@ -36,9 +36,9 @@ const (
 	veleroImageRegistry   = "docker.io/velero"
 	veleroImageRegistryCN = "registry.docker-cn.com/velero"
 
-	veleroImageTag    = "velero:v1.5.3"
-	veleroAwsImageTag = "velero-plugin-for-aws:v1.1.0"
-	veleroGcpImageTag = "velero-plugin-for-gcp:v1.1.0"
+	veleroImageTag    = "velero:v1.6.0"
+	veleroAwsImageTag = "velero-plugin-for-aws:v1.2.0"
+	veleroGcpImageTag = "velero-plugin-for-gcp:v1.2.0"
 
 	credentialsRequestName = "velero-iam-credentials"
 )
@@ -68,11 +68,7 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 	foundBsl := &velerov1.BackupStorageLocation{}
 	var caCertData []byte
 	bsl := veleroInstall.BackupStorageLocation(namespace, provider, instance.Status.StorageBucket.Name, "", locationConfig, caCertData)
-	bslName, err := runtimeClient.ObjectKeyFromObject(bsl)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	if err = r.client.Get(context.TODO(), bslName, foundBsl); err != nil {
+	if err = r.client.Get(context.TODO(), runtimeClient.ObjectKeyFromObject(bsl), foundBsl); err != nil {
 		if errors.IsNotFound(err) {
 			// Didn't find BackupStorageLocation
 			reqLogger.Info("Creating BackupStorageLocation")
@@ -100,11 +96,7 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 	// Install VolumeSnapshotLocation
 	foundVsl := &velerov1.VolumeSnapshotLocation{}
 	vsl := veleroInstall.VolumeSnapshotLocation(namespace, provider, locationConfig)
-	vslName, err := runtimeClient.ObjectKeyFromObject(vsl)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	if err = r.client.Get(context.TODO(), vslName, foundVsl); err != nil {
+	if err = r.client.Get(context.TODO(), runtimeClient.ObjectKeyFromObject(vsl), foundVsl); err != nil {
 		if errors.IsNotFound(err) {
 			// Didn't find VolumeSnapshotLocation
 			reqLogger.Info("Creating VolumeSnapshotLocation")
@@ -144,11 +136,7 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 	default:
 		return reconcile.Result{}, fmt.Errorf("unable to determine platform")
 	}
-	crName, err := runtimeClient.ObjectKeyFromObject(cr)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	if err = r.client.Get(context.TODO(), crName, foundCr); err != nil {
+	if err = r.client.Get(context.TODO(), runtimeClient.ObjectKeyFromObject(cr), foundCr); err != nil {
 		if errors.IsNotFound(err) {
 			// Didn't find CredentialsRequest
 			reqLogger.Info("Creating CredentialsRequest")
@@ -180,11 +168,7 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 	// Install Deployment
 	foundDeployment := &appsv1.Deployment{}
 	deployment := veleroDeployment(namespace, r.driver.GetPlatformType(), determineVeleroImageRegistry(r.driver.GetPlatformType(), locationConfig["region"]))
-	deploymentName, err := runtimeClient.ObjectKeyFromObject(deployment)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	if err = r.client.Get(context.TODO(), deploymentName, foundDeployment); err != nil {
+	if err = r.client.Get(context.TODO(), runtimeClient.ObjectKeyFromObject(deployment), foundDeployment); err != nil {
 		if errors.IsNotFound(err) {
 			// Didn't find Deployment
 			reqLogger.Info("Creating Deployment")
@@ -212,11 +196,7 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 	// Install Metrics Service
 	foundService := &corev1.Service{}
 	service := metricsServiceFromDeployment(deployment)
-	serviceName, err := runtimeClient.ObjectKeyFromObject(service)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	if err = r.client.Get(context.TODO(), serviceName, foundService); err != nil {
+	if err = r.client.Get(context.TODO(), runtimeClient.ObjectKeyFromObject(service), foundService); err != nil {
 		if errors.IsNotFound(err) {
 			// Didn't find Service
 			reqLogger.Info("Creating Service")
@@ -248,11 +228,7 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 	// Install Metrics ServiceMonitor
 	foundServiceMonitor := &monitoringv1.ServiceMonitor{}
 	serviceMonitor := generateServiceMonitor(foundService)
-	serviceMonitorName, err := runtimeClient.ObjectKeyFromObject(serviceMonitor)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-	if err = r.client.Get(context.TODO(), serviceMonitorName, foundServiceMonitor); err != nil {
+	if err = r.client.Get(context.TODO(), runtimeClient.ObjectKeyFromObject(serviceMonitor), foundServiceMonitor); err != nil {
 		if errors.IsNotFound(err) {
 			// Didn't find ServiceMonitor
 			reqLogger.Info("Creating ServiceMonitor")

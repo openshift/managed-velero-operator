@@ -107,14 +107,14 @@ type ReconcileVelero struct {
 
 // Reconcile reads that state of the cluster for a Velero object and makes changes based on the state read
 // and what is in the Velero.Spec
-func (r *ReconcileVelero) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *ReconcileVelero) Reconcile(context context.Context, request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling Velero Installation")
 	var err error
 
 	// Fetch the Velero instance
 	instance := &veleroInstallCR.VeleroInstall{}
-	err = r.client.Get(context.TODO(), request.NamespacedName, instance)
+	err = r.client.Get(context, request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -127,7 +127,7 @@ func (r *ReconcileVelero) Reconcile(request reconcile.Request) (reconcile.Result
 	}
 
 	// Grab infrastructureStatus to determine where OpenShift is installed.
-	pc, err := platformutils.NewClient(context.TODO())
+	pc, err := platformutils.NewClient(context)
 	if err != nil {
 		return reconcile.Result{}, err
 	}

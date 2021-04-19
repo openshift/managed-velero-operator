@@ -12,7 +12,7 @@ import (
 )
 
 func TestInstallVeleroCRDs(t *testing.T) {
-	fakeClient := fake.NewFakeClient()
+	fakeClient := fake.NewClientBuilder().Build()
 
 	err := InstallVeleroCRDs(logf.Log, fakeClient)
 	if err != nil {

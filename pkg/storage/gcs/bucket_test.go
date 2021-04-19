@@ -28,7 +28,7 @@ func TestCreateBucket(t *testing.T) {
 		},
 	}
 	drv.Context = ctx
-	drv.KubeClient = fakekubeclient.NewFakeClient(localObjects...)
+	drv.KubeClient = fakekubeclient.NewClientBuilder().WithRuntimeObjects(localObjects...).Build()
 	err := drv.createBucket(fakeGClient, "dummy-bucket-name")
 	if err != nil {
 		t.Errorf("CreateBucket() Error: %v", err)

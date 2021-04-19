@@ -39,5 +39,5 @@ func setUpTestClient(t *testing.T, instance *velerov1alpha2.VeleroInstall) k8sCl
 	s.AddKnownTypes(velerov1alpha2.SchemeGroupVersion, instance)
 	objects := []runtime.Object{instance}
 
-	return fake.NewFakeClientWithScheme(s, objects...)
+	return fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objects...).Build()
 }

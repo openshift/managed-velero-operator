@@ -33,13 +33,18 @@ const (
 	awsCredsSecretIDKey     = "aws_access_key_id"     // #nosec G101
 	awsCredsSecretAccessKey = "aws_secret_access_key" // #nosec G101
 
-	veleroImageRegistry = "quay.io/app-sre"
+	veleroImageRegistry   = "docker.io/velero"
+	veleroImageRegistryCN = "registry.docker-cn.com/velero"
 
 	veleroImageTag    = "velero:v1.6.0"
 	veleroAwsImageTag = "velero-plugin-for-aws:v1.2.0"
 	veleroGcpImageTag = "velero-plugin-for-gcp:v1.2.0"
 
 	credentialsRequestName = "velero-iam-credentials"
+)
+
+var (
+	awsChinaRegions = []string{"cn-north-1", "cn-northwest-1"}
 )
 
 func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace string, platformStatus *configv1.PlatformStatus, instance *veleroInstallCR.VeleroInstall) (reconcile.Result, error) {
@@ -162,7 +167,7 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 
 	// Install Deployment
 	foundDeployment := &appsv1.Deployment{}
-	deployment := veleroDeployment(namespace, r.driver.GetPlatformType())
+	deployment := veleroDeployment(namespace, r.driver.GetPlatformType(), determineVeleroImageRegistry(r.driver.GetPlatformType(), locationConfig["region"]))
 	if err = r.client.Get(context.TODO(), runtimeClient.ObjectKeyFromObject(deployment), foundDeployment); err != nil {
 		if errors.IsNotFound(err) {
 			// Didn't find Deployment
@@ -343,7 +348,7 @@ func gcpCredentialsRequest(namespace, name string) *minterv1.CredentialsRequest 
 	}
 }
 
-func veleroDeployment(namespace string, platform configv1.PlatformType) *appsv1.Deployment {
+func veleroDeployment(namespace string, platform configv1.PlatformType, veleroImageRegistry string) *appsv1.Deployment {
 	var deployment *appsv1.Deployment
 
 	//TODO(cblecker): fix resources
@@ -505,6 +510,20 @@ func metricsServiceFromDeployment(deployment *appsv1.Deployment) *corev1.Service
 			SessionAffinity: corev1.ServiceAffinityNone,
 		},
 	}
+}
+
+func determineVeleroImageRegistry(platform configv1.PlatformType, region string) string {
+	if platform == configv1.AWSPlatformType {
+		// Use the image in Chinese mirror if running on AWS China
+		for _, v := range awsChinaRegions {
+			if region == v {
+				return veleroImageRegistryCN
+			}
+		}
+	}
+
+	// Use global image by default
+	return veleroImageRegistry
 }
 
 func credentialsRequestSpecEqual(x, y minterv1.CredentialsRequestSpec) (bool, error) {

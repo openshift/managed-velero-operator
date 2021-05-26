@@ -18,8 +18,8 @@ import (
 
 	veleroInstall "github.com/vmware-tanzu/velero/pkg/install"
 
-	endpoints "github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/go-logr/logr"
+	"github.com/openshift/managed-velero-operator/version"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -45,6 +45,10 @@ const (
 
 var (
 	awsChinaRegions = []string{"cn-north-1", "cn-northwest-1"}
+)
+
+var (
+	awsCredsSecretName = version.OperatorName + "-iam-credentials"
 )
 
 func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace string, platformStatus *configv1.PlatformStatus, instance *veleroInstallCR.VeleroInstall) (reconcile.Result, error) {
@@ -126,11 +130,7 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 	var cr *minterv1.CredentialsRequest
 	switch r.driver.GetPlatformType() {
 	case configv1.AWSPlatformType:
-		partition, ok := endpoints.PartitionForRegion(endpoints.DefaultPartitions(), locationConfig["region"])
-		if !ok {
-			return reconcile.Result{}, fmt.Errorf("no partition found for region %q", locationConfig["region"])
-		}
-		cr = awsCredentialsRequest(namespace, credentialsRequestName, partition.ID(), instance.Status.StorageBucket.Name)
+		// No credentialsRequest needed for aws
 	case configv1.GCPPlatformType:
 		cr = gcpCredentialsRequest(namespace, credentialsRequestName)
 	default:
@@ -254,66 +254,6 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 	return reconcile.Result{}, nil
 }
 
-func awsCredentialsRequest(namespace, name, partitionID, bucketName string) *minterv1.CredentialsRequest {
-	codec, _ := minterv1.NewCodec()
-	provSpec, _ := codec.EncodeProviderSpec(
-		&minterv1.AWSProviderSpec{
-			TypeMeta: metav1.TypeMeta{
-				Kind: "AWSProviderSpec",
-			},
-			StatementEntries: []minterv1.StatementEntry{
-				{
-					Effect: "Allow",
-					Action: []string{
-						"ec2:DescribeVolumes",
-						"ec2:DescribeSnapshots",
-						"ec2:CreateTags",
-						"ec2:CreateVolume",
-						"ec2:CreateSnapshot",
-						"ec2:DeleteSnapshot",
-					},
-					Resource: "*",
-				},
-				{
-					Effect: "Allow",
-					Action: []string{
-						"s3:GetObject",
-						"s3:DeleteObject",
-						"s3:PutObject",
-						"s3:AbortMultipartUpload",
-						"s3:ListMultipartUploadParts",
-					},
-					Resource: fmt.Sprintf("arn:%s:s3:::%s/*", partitionID, bucketName),
-				},
-				{
-					Effect: "Allow",
-					Action: []string{
-						"s3:ListBucket",
-					},
-					Resource: fmt.Sprintf("arn:%s:s3:::%s", partitionID, bucketName),
-				},
-			},
-		})
-
-	return &minterv1.CredentialsRequest{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "CredentialsRequest",
-			APIVersion: minterv1.SchemeGroupVersion.String(),
-		},
-		Spec: minterv1.CredentialsRequestSpec{
-			SecretRef: corev1.ObjectReference{
-				Name:      name,
-				Namespace: namespace,
-			},
-			ProviderSpec: provSpec,
-		},
-	}
-}
-
 func gcpCredentialsRequest(namespace, name string) *minterv1.CredentialsRequest {
 	codec, _ := minterv1.NewCodec()
 	provSpec, _ := codec.EncodeProviderSpec(
@@ -357,12 +297,31 @@ func veleroDeployment(namespace string, platform configv1.PlatformType, veleroIm
 	switch platform {
 	case configv1.AWSPlatformType:
 		deployment = veleroInstall.Deployment(namespace,
-			veleroInstall.WithEnvFromSecretKey(strings.ToUpper(awsCredsSecretIDKey), credentialsRequestName, awsCredsSecretIDKey),
-			veleroInstall.WithEnvFromSecretKey(strings.ToUpper(awsCredsSecretAccessKey), credentialsRequestName, awsCredsSecretAccessKey),
 			//TODO(cblecker): fix resources
 			// veleroInstall.WithResources(veleroPodResources),
 			veleroInstall.WithPlugins([]string{veleroImageRegistry + "/" + veleroAwsImageTag}),
 			veleroInstall.WithImage(veleroImageRegistry+"/"+veleroImageTag),
+		)
+		defaultMode := int32(420)
+		deployment.Spec.Template.Spec.Volumes = append(
+			deployment.Spec.Template.Spec.Volumes,
+			corev1.Volume{
+				Name: "cloud-credentials",
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName:  awsCredsSecretName, //make sharedcredsfile secret
+						DefaultMode: &defaultMode,
+					},
+				},
+			},
+		)
+
+		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(
+			deployment.Spec.Template.Spec.Containers[0].VolumeMounts,
+			corev1.VolumeMount{
+				Name:      "cloud-credentials",
+				MountPath: "/.aws",
+			},
 		)
 	case configv1.GCPPlatformType:
 		deployment = veleroInstall.Deployment(namespace,

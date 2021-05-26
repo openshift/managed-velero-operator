@@ -30,9 +30,6 @@ import (
 )
 
 const (
-	awsCredsSecretIDKey     = "aws_access_key_id"     // #nosec G101
-	awsCredsSecretAccessKey = "aws_secret_access_key" // #nosec G101
-
 	veleroImageRegistry   = "docker.io/velero"
 	veleroImageRegistryCN = "registry.docker-cn.com/velero"
 
@@ -309,7 +306,7 @@ func veleroDeployment(namespace string, platform configv1.PlatformType, veleroIm
 				Name: "cloud-credentials",
 				VolumeSource: corev1.VolumeSource{
 					Secret: &corev1.SecretVolumeSource{
-						SecretName:  awsCredsSecretName, //make sharedcredsfile secret
+						SecretName:  awsCredsSecretName,
 						DefaultMode: &defaultMode,
 					},
 				},

@@ -130,36 +130,36 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 		// No credentialsRequest needed for aws
 	case configv1.GCPPlatformType:
 		cr = gcpCredentialsRequest(namespace, credentialsRequestName)
-	default:
-		return reconcile.Result{}, fmt.Errorf("unable to determine platform")
-	}
-	if err = r.client.Get(context.TODO(), runtimeClient.ObjectKeyFromObject(cr), foundCr); err != nil {
-		if errors.IsNotFound(err) {
-			// Didn't find CredentialsRequest
-			reqLogger.Info("Creating CredentialsRequest")
-			if err := controllerutil.SetControllerReference(instance, cr, r.scheme); err != nil {
-				return reconcile.Result{}, err
-			}
-			if err = r.client.Create(context.TODO(), cr); err != nil {
+		if err = r.client.Get(context.TODO(), runtimeClient.ObjectKeyFromObject(cr), foundCr); err != nil {
+			if errors.IsNotFound(err) {
+				// Didn't find CredentialsRequest
+				reqLogger.Info("Creating CredentialsRequest")
+				if err := controllerutil.SetControllerReference(instance, cr, r.scheme); err != nil {
+					return reconcile.Result{}, err
+				}
+				if err = r.client.Create(context.TODO(), cr); err != nil {
+					return reconcile.Result{}, err
+				}
+			} else {
 				return reconcile.Result{}, err
 			}
 		} else {
-			return reconcile.Result{}, err
-		}
-	} else {
-		// CredentialsRequest exists, check if it's updated.
-		crEqual, err := credentialsRequestSpecEqual(foundCr.Spec, cr.Spec)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-		if !crEqual {
-			// Specs aren't equal, update and fix.
-			reqLogger.Info("Updating CredentialsRequest", "foundCr.Spec", foundCr.Spec, "cr.Spec", cr.Spec)
-			foundCr.Spec = *cr.Spec.DeepCopy()
-			if err = r.client.Update(context.TODO(), foundCr); err != nil {
+			// CredentialsRequest exists, check if it's updated.
+			crEqual, err := credentialsRequestSpecEqual(foundCr.Spec, cr.Spec)
+			if err != nil {
 				return reconcile.Result{}, err
 			}
+			if !crEqual {
+				// Specs aren't equal, update and fix.
+				reqLogger.Info("Updating CredentialsRequest", "foundCr.Spec", foundCr.Spec, "cr.Spec", cr.Spec)
+				foundCr.Spec = *cr.Spec.DeepCopy()
+				if err = r.client.Update(context.TODO(), foundCr); err != nil {
+					return reconcile.Result{}, err
+				}
+			}
 		}
+	default:
+		return reconcile.Result{}, fmt.Errorf("unable to determine platform")
 	}
 
 	// Install Deployment
@@ -313,11 +313,38 @@ func veleroDeployment(namespace string, platform configv1.PlatformType, veleroIm
 			},
 		)
 
+		deployment.Spec.Template.Spec.Volumes = append(
+			deployment.Spec.Template.Spec.Volumes,
+			corev1.Volume{
+				Name: "bound-sa-token",
+				VolumeSource: corev1.VolumeSource{
+					Projected: &corev1.ProjectedVolumeSource{
+						Sources: []corev1.VolumeProjection{
+							{
+								ServiceAccountToken: &corev1.ServiceAccountTokenProjection{
+									Audience: "openshift",
+									Path:     "token",
+								},
+							},
+						},
+					},
+				},
+			},
+		)
+
 		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(
 			deployment.Spec.Template.Spec.Containers[0].VolumeMounts,
 			corev1.VolumeMount{
 				Name:      "cloud-credentials",
 				MountPath: "/.aws",
+			},
+		)
+
+		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(
+			deployment.Spec.Template.Spec.Containers[0].VolumeMounts,
+			corev1.VolumeMount{
+				Name:      "bound-sa-token",
+				MountPath: "/var/run/secrets/openshift/serviceaccount",
 			},
 		)
 	case configv1.GCPPlatformType:

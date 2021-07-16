@@ -3,6 +3,7 @@ package s3
 import (
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/openshift/managed-velero-operator/version"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
@@ -12,15 +13,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
-)
-
-const (
-	awsCredsSecretIDKey     = "aws_access_key_id"     // #nosec G101
-	awsCredsSecretAccessKey = "aws_secret_access_key" // #nosec G101
 )
 
 var (
@@ -117,6 +112,12 @@ func (c *awsClient) PutPublicAccessBlock(input *s3.PutPublicAccessBlockInput) (*
 func NewS3Client(kubeClient client.Client, region string) (Client, error) {
 	var err error
 
+	sessionOptions := session.Options{
+		Config: aws.Config{
+			Region: aws.String(region),
+		},
+	}
+
 	awsConfig := &aws.Config{Region: aws.String(region)}
 	namespace, err := k8sutil.GetOperatorNamespace()
 	if err != nil {
@@ -133,24 +134,23 @@ func NewS3Client(kubeClient client.Client, region string) (Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	accessKeyID, ok := secret.Data[awsCredsSecretIDKey]
-	if !ok {
-		return nil, fmt.Errorf("AWS credentials secret %v did not contain key %v",
-			awsCredsSecretName, awsCredsSecretIDKey)
-	}
-	secretAccessKey, ok := secret.Data[awsCredsSecretAccessKey]
-	if !ok {
-		return nil, fmt.Errorf("AWS credentials secret %v did not contain key %v",
-			awsCredsSecretName, awsCredsSecretAccessKey)
-	}
 
-	awsConfig.Credentials = credentials.NewStaticCredentials(
-		string(accessKeyID), string(secretAccessKey), "")
-
-	s, err := session.NewSession(awsConfig)
+	// get sharedCredsFile from secret
+	sharedCredsFile, err := SharedCredentialsFileFromSecret(secret)
 	if err != nil {
 		return nil, err
 	}
+
+	sessionOptions.SharedConfigState = session.SharedConfigEnable // Force enable Shared Config support
+	sessionOptions.SharedConfigFiles = []string{sharedCredsFile}  // Ordered list of files the session will load configuration from.
+
+	s, err := session.NewSessionWithOptions(sessionOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	// Remove temporary shared credentials token at end of func after creating session
+	defer os.Remove(sharedCredsFile)
 
 	// Load the actual AWS client into the awsClient interface.
 	return &awsClient{

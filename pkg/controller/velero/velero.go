@@ -36,9 +36,9 @@ const (
 	veleroImageRegistry   = "docker.io/velero"
 	veleroImageRegistryCN = "registry.docker-cn.com/velero"
 
-	veleroImageTag    = "velero:v1.6.0"
-	veleroAwsImageTag = "velero-plugin-for-aws:v1.2.0"
-	veleroGcpImageTag = "velero-plugin-for-gcp:v1.2.0"
+	veleroImageTag    = "velero:v1.6.3"
+	veleroAwsImageTag = "velero-plugin-for-aws:v1.2.1"
+	veleroGcpImageTag = "velero-plugin-for-gcp:v1.2.1"
 
 	credentialsRequestName = "velero-iam-credentials"
 )

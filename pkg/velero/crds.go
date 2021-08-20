@@ -7,7 +7,7 @@ import (
 	veleroInstall "github.com/vmware-tanzu/velero/pkg/install"
 
 	"github.com/go-logr/logr"
-	apiextv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	apiv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -19,16 +19,15 @@ func InstallVeleroCRDs(log logr.Logger, client client.Client) error {
 	var err error
 
 	// Install CRDs
-	for _, unstructuredCrd := range veleroInstall.AllCRDs().Items {
-		foundCrd := &apiextv1beta1.CustomResourceDefinition{}
-		crd := &apiextv1beta1.CustomResourceDefinition{}
+	for _, unstructuredCrd := range veleroInstall.AllCRDs("v1").Items {
+		// Get upstream crds
+		crd := &apiv1.CustomResourceDefinition{}
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(unstructuredCrd.Object, crd); err != nil {
 			return err
 		}
-		// Add Conversion to the spec, as this will be returned in the founcCrd
-		crd.Spec.Conversion = &apiextv1beta1.CustomResourceConversion{
-			Strategy: apiextv1beta1.NoneConverter,
-		}
+
+		// Lookup for installed/pre-existing crds
+		foundCrd := &apiv1.CustomResourceDefinition{}
 		if err = client.Get(context.TODO(), types.NamespacedName{Name: crd.ObjectMeta.Name}, foundCrd); err != nil {
 			if errors.IsNotFound(err) {
 				// Didn't find CRD, we should create it.

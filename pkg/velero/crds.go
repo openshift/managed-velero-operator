@@ -26,6 +26,11 @@ func InstallVeleroCRDs(log logr.Logger, client client.Client) error {
 			return err
 		}
 
+		// Add Conversion to the spec, as this will be returned in the founcCrd
+		crd.Spec.Conversion = &apiv1.CustomResourceConversion{
+			Strategy: apiv1.NoneConverter,
+		}
+
 		// Lookup for installed/pre-existing crds
 		foundCrd := &apiv1.CustomResourceDefinition{}
 		if err = client.Get(context.TODO(), types.NamespacedName{Name: crd.ObjectMeta.Name}, foundCrd); err != nil {

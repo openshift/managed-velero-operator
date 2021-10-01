@@ -3,13 +3,13 @@ module github.com/openshift/managed-velero-operator
 go 1.15
 
 require (
-	github.com/aws/aws-sdk-go v1.38.21
+	github.com/aws/aws-sdk-go v1.40.53
 	github.com/go-logr/logr v0.4.0
 	github.com/go-openapi/spec v0.20.3
 	github.com/google/uuid v1.2.0
 	github.com/openshift/api v0.0.0-20210202165416-a9e731090f5e
 	github.com/openshift/cloud-credential-operator v0.0.0-20210322184820-2aec1a53520e
-	github.com/vmware-tanzu/velero v1.6.3
+	github.com/vmware-tanzu/velero v1.7.0
 )
 
 require (
@@ -21,15 +21,13 @@ require (
 	github.com/spf13/pflag v1.0.5
 	golang.org/x/oauth2 v0.0.0-20210402161424-2e8d93401602
 	google.golang.org/api v0.44.0
-	k8s.io/api v0.20.0
+	k8s.io/api v0.20.9
 	k8s.io/apiextensions-apiserver v0.19.12
-	k8s.io/apimachinery v0.20.0
+	k8s.io/apimachinery v0.20.9
 	k8s.io/client-go v12.0.0+incompatible
 	k8s.io/kube-openapi v0.0.0-20200805222855-6aeccd4b50c6
 	sigs.k8s.io/controller-runtime v0.7.1-0.20201215171748-096b2e07c091
 )
-
-replace github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.3.2+incompatible // Required by OLM
 
 replace ( // Required by velero
 	k8s.io/api => k8s.io/api v0.19.7

@@ -36,9 +36,9 @@ const (
 	veleroImageRegistry   = "docker.io/velero"
 	veleroImageRegistryCN = "registry.docker-cn.com/velero"
 
-	veleroImageTag    = "velero:v1.6.3"
-	veleroAwsImageTag = "velero-plugin-for-aws:v1.2.1"
-	veleroGcpImageTag = "velero-plugin-for-gcp:v1.2.1"
+	veleroImageTag    = "velero@sha256:d840d544c35d118f8af0bdcbaa911194c1f6d09ad796f19ac2ec1722f202ea42"                // docker.io/velero/velero:v1.7.0
+	veleroAwsImageTag = "velero-plugin-for-aws@sha256:cb7c7e4df28acd40c2fbbc5582ca4da673377b484c0afd793e7663a8c1bc73e6" // docker.io/velero/velero-plugin-for-aws:v1.3.0
+	veleroGcpImageTag = "velero-plugin-for-gcp@sha256:319c0ef33c4ffd263d347d4a935498113582f6822b122d6a371a48031f4e8c07" // docker.io/velero/velero-plugin-for-gcp:v1.3.0
 
 	credentialsRequestName = "velero-iam-credentials"
 )

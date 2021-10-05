@@ -2,8 +2,10 @@ reviewers:
  - cblecker
  - luis-falcon
  - yithian
+ - dustman9000
 approvers:
 - cblecker
 - luis-falcon
+- dustman9000
 maintainers:
 - cblecker

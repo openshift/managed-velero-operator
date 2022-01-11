@@ -33,18 +33,13 @@ const (
 	awsCredsSecretIDKey     = "aws_access_key_id"     // #nosec G101
 	awsCredsSecretAccessKey = "aws_secret_access_key" // #nosec G101
 
-	veleroImageRegistry   = "docker.io/velero"
-	veleroImageRegistryCN = "registry.docker-cn.com/velero"
+	veleroImageRegistry = "quay.io/konveyor"
 
-	veleroImageTag    = "velero@sha256:d840d544c35d118f8af0bdcbaa911194c1f6d09ad796f19ac2ec1722f202ea42"                // docker.io/velero/velero:v1.7.0
-	veleroAwsImageTag = "velero-plugin-for-aws@sha256:cb7c7e4df28acd40c2fbbc5582ca4da673377b484c0afd793e7663a8c1bc73e6" // docker.io/velero/velero-plugin-for-aws:v1.3.0
-	veleroGcpImageTag = "velero-plugin-for-gcp@sha256:319c0ef33c4ffd263d347d4a935498113582f6822b122d6a371a48031f4e8c07" // docker.io/velero/velero-plugin-for-gcp:v1.3.0
+	veleroImageTag    = "velero@sha256:c5f03599f5c0de1600fa641cdb587026519d50cb9d928d81ac74e22274e9ad64"                // quay.io/konveyor/velero:oadp-0.5.3-amd64
+	veleroAwsImageTag = "velero-plugin-for-aws@sha256:970850442874feec285b55d317a8866db246c27aea388154249ed804de126187" // quay.io/konveyor/velero-plugin-for-aws:oadp-0.5.3-amd64
+	veleroGcpImageTag = "velero-plugin-for-gcp@sha256:8df904ca820164d259fde6b361983edb58c4f0d5217e597542ffa13b96128d0c" // quay.io/konveyor/velero-plugin-for-gcp:oadp-0.5.3-amd64
 
 	credentialsRequestName = "velero-iam-credentials"
-)
-
-var (
-	awsChinaRegions = []string{"cn-north-1", "cn-northwest-1"}
 )
 
 func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace string, platformStatus *configv1.PlatformStatus, instance *veleroInstallCR.VeleroInstall) (reconcile.Result, error) {
@@ -167,7 +162,7 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 
 	// Install Deployment
 	foundDeployment := &appsv1.Deployment{}
-	deployment := veleroDeployment(namespace, r.driver.GetPlatformType(), determineVeleroImageRegistry(r.driver.GetPlatformType(), locationConfig["region"]))
+	deployment := veleroDeployment(namespace, r.driver.GetPlatformType(), veleroImageRegistry)
 	if err = r.client.Get(context.TODO(), runtimeClient.ObjectKeyFromObject(deployment), foundDeployment); err != nil {
 		if errors.IsNotFound(err) {
 			// Didn't find Deployment
@@ -510,20 +505,6 @@ func metricsServiceFromDeployment(deployment *appsv1.Deployment) *corev1.Service
 			SessionAffinity: corev1.ServiceAffinityNone,
 		},
 	}
-}
-
-func determineVeleroImageRegistry(platform configv1.PlatformType, region string) string {
-	if platform == configv1.AWSPlatformType {
-		// Use the image in Chinese mirror if running on AWS China
-		for _, v := range awsChinaRegions {
-			if region == v {
-				return veleroImageRegistryCN
-			}
-		}
-	}
-
-	// Use global image by default
-	return veleroImageRegistry
 }
 
 func credentialsRequestSpecEqual(x, y minterv1.CredentialsRequestSpec) (bool, error) {

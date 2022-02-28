@@ -35,9 +35,9 @@ const (
 
 	veleroImageRegistry = "quay.io/konveyor"
 
-	veleroImageTag    = "velero@sha256:c5f03599f5c0de1600fa641cdb587026519d50cb9d928d81ac74e22274e9ad64"                // quay.io/konveyor/velero:oadp-0.5.3-amd64
-	veleroAwsImageTag = "velero-plugin-for-aws@sha256:970850442874feec285b55d317a8866db246c27aea388154249ed804de126187" // quay.io/konveyor/velero-plugin-for-aws:oadp-0.5.3-amd64
-	veleroGcpImageTag = "velero-plugin-for-gcp@sha256:8df904ca820164d259fde6b361983edb58c4f0d5217e597542ffa13b96128d0c" // quay.io/konveyor/velero-plugin-for-gcp:oadp-0.5.3-amd64
+	veleroImageTag    = "velero@sha256:6abd52244096680eeb3c80289999a00f642069edcd3d2e6c6948317b4bdd9bcd" // quay.io/konveyor/velero:oadp-1.0.1-amd64
+	veleroAwsImageTag = "velero-plugin-for-aws@sha256:7c22d5ae59862a66bac77e3fb48e6cd9c1556e4c9d7277aad4f093a198cb4373" // quay.io/konveyor/velero-plugin-for-aws:oadp-1.0.1-amd64
+	veleroGcpImageTag = "velero-plugin-for-gcp@sha256:4633343934e8a2163b6738c8572d339efbe0c44229e0d2af4e3b00ad5239446e" // quay.io/konveyor/velero-plugin-for-gcp:oadp-1.0.1-amd64
 
 	credentialsRequestName = "velero-iam-credentials"
 )

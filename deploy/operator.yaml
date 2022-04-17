@@ -45,3 +45,15 @@ spec:
                   fieldPath: metadata.namespace
             - name: OPERATOR_NAME
               value: "managed-velero-operator"
+          volumeMounts:
+          - mountPath: /etc/pki/ca-trust/extracted/pem
+            name: trusted-ca-bundle
+            readOnly: true
+      volumes:
+      - configMap:
+          defaultMode: 420
+          items:
+            - key: ca-bundle.crt
+              path: tls-ca-bundle.pem
+          name: trusted-ca-bundle
+        name: trusted-ca-bundle

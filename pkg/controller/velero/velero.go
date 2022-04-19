@@ -35,7 +35,7 @@ const (
 
 	veleroImageRegistry = "quay.io/konveyor"
 
-	veleroImageTag    = "velero@sha256:6abd52244096680eeb3c80289999a00f642069edcd3d2e6c6948317b4bdd9bcd" // quay.io/konveyor/velero:oadp-1.0.1-amd64
+	veleroImageTag    = "velero@sha256:6abd52244096680eeb3c80289999a00f642069edcd3d2e6c6948317b4bdd9bcd"                // quay.io/konveyor/velero:oadp-1.0.1-amd64
 	veleroAwsImageTag = "velero-plugin-for-aws@sha256:7c22d5ae59862a66bac77e3fb48e6cd9c1556e4c9d7277aad4f093a198cb4373" // quay.io/konveyor/velero-plugin-for-aws:oadp-1.0.1-amd64
 	veleroGcpImageTag = "velero-plugin-for-gcp@sha256:4633343934e8a2163b6738c8572d339efbe0c44229e0d2af4e3b00ad5239446e" // quay.io/konveyor/velero-plugin-for-gcp:oadp-1.0.1-amd64
 
@@ -208,9 +208,13 @@ func (r *ReconcileVelero) provisionVelero(reqLogger logr.Logger, namespace strin
 		return reconcile.Result{}, err
 	}
 	// Service exists, check if it's updated.
-	// Note: We leave Spec.ClusterIP unspecified for the master to set.
-	//       Copy it from foundService to satisfy reflect.DeepEqual.
+	// Note: We leave fields related to cluster IP address, IPv6, and
+	// InternalTrafficPolicy alone.
 	service.Spec.ClusterIP = foundService.Spec.ClusterIP
+	service.Spec.ClusterIPs = foundService.Spec.ClusterIPs
+	service.Spec.IPFamilies = foundService.Spec.IPFamilies
+	service.Spec.IPFamilyPolicy = foundService.Spec.IPFamilyPolicy
+	service.Spec.InternalTrafficPolicy = foundService.Spec.InternalTrafficPolicy
 	if !reflect.DeepEqual(foundService.Spec, service.Spec) {
 		// Specs aren't equal, update and fix.
 		reqLogger.Info("Updating Service", "foundService.Spec", foundService.Spec, "service.Spec", service.Spec)

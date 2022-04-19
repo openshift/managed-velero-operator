@@ -400,6 +400,35 @@ func veleroDeployment(namespace string, platform configv1.PlatformType, veleroIm
 		}...)
 	}
 
+	// add trusted-ca-bundle volume mount
+	deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(
+		deployment.Spec.Template.Spec.Containers[0].VolumeMounts,
+		corev1.VolumeMount{
+			Name:      "trusted-ca-bundle",
+			MountPath: "/etc/pki/ca-trust/extracted/pem",
+			ReadOnly:  true,
+		},
+	)
+	deployment.Spec.Template.Spec.Volumes = append(
+		deployment.Spec.Template.Spec.Volumes,
+		corev1.Volume{
+			Name: "trusted-ca-bundle",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: "trusted-ca-bundle",
+					},
+					Items: []corev1.KeyToPath{
+						{
+							Key:  "ca-bundle.crt",
+							Path: "tls-ca-bundle.pem",
+						},
+					},
+				},
+			},
+		},
+	)
+
 	replicas := int32(1)
 	terminationGracePeriodSeconds := int64(30)
 	revisionHistoryLimit := int32(2)

@@ -35,7 +35,7 @@ const (
 
 	veleroImageRegistry = "quay.io/konveyor"
 
-	veleroImageTag    = "velero@sha256:6abd52244096680eeb3c80289999a00f642069edcd3d2e6c6948317b4bdd9bcd" // quay.io/konveyor/velero:oadp-1.0.1-amd64
+	veleroImageTag    = "velero@sha256:6abd52244096680eeb3c80289999a00f642069edcd3d2e6c6948317b4bdd9bcd"                // quay.io/konveyor/velero:oadp-1.0.1-amd64
 	veleroAwsImageTag = "velero-plugin-for-aws@sha256:7c22d5ae59862a66bac77e3fb48e6cd9c1556e4c9d7277aad4f093a198cb4373" // quay.io/konveyor/velero-plugin-for-aws:oadp-1.0.1-amd64
 	veleroGcpImageTag = "velero-plugin-for-gcp@sha256:4633343934e8a2163b6738c8572d339efbe0c44229e0d2af4e3b00ad5239446e" // quay.io/konveyor/velero-plugin-for-gcp:oadp-1.0.1-amd64
 
@@ -395,6 +395,35 @@ func veleroDeployment(namespace string, platform configv1.PlatformType, veleroIm
 			},
 		}...)
 	}
+
+	// add trusted-ca-bundle volume mount
+	deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(
+		deployment.Spec.Template.Spec.Containers[0].VolumeMounts,
+		corev1.VolumeMount{
+			Name:      "trusted-ca-bundle",
+			MountPath: "/etc/pki/ca-trust/extracted/pem",
+			ReadOnly:  true,
+		},
+	)
+	deployment.Spec.Template.Spec.Volumes = append(
+		deployment.Spec.Template.Spec.Volumes,
+		corev1.Volume{
+			Name: "trusted-ca-bundle",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: "trusted-ca-bundle",
+					},
+					Items: []corev1.KeyToPath{
+						{
+							Key:  "ca-bundle.crt",
+							Path: "tls-ca-bundle.pem",
+						},
+					},
+				},
+			},
+		},
+	)
 
 	replicas := int32(1)
 	terminationGracePeriodSeconds := int64(30)

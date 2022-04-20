@@ -53,6 +53,7 @@ spec:
       - name: trusted-ca-bundle
         configMap:
           name: trusted-ca-bundle
+          defaultMode: 420
           items:
             - key: ca-bundle.crt
               path: tls-ca-bundle.pem

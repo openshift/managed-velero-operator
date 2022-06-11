@@ -140,25 +140,60 @@ objects:
         name: managed-velero-operator-registry
         namespace: openshift-velero
       spec:
-        image: ${REGISTRY_IMG}@${IMAGE_DIGEST}
-        affinity:
-          nodeAffinity:
-            preferredDuringSchedulingIgnoredDuringExecution:
-            - preference:
-                matchExpressions:
-                - key: node-role.kubernetes.io/infra
-                  operator: Exists
-              weight: 1
-        tolerations:
-          - effect: NoSchedule
-            key: node-role.kubernetes.io/infra
-            operator: Exists
-        displayName: Managed Velero Operator
+        address: managed-velero-operator-registry.openshift-velero.svc:50051
+        displayName: ${DISPLAY_NAME}
         icon:
           base64data: ''
           mediatype: ''
         publisher: Red Hat
         sourceType: grpc
+    - apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        labels:
+          olm.catalogSource: managed-velero-operator-registry
+        name: managed-velero-operator-registry
+        namespace: openshift-velero
+      spec:
+        replicas: 1
+        selector:
+          matchLabels:
+            app: managed-velero-operator-registry
+        template:
+          metadata:
+            labels:
+              olm.catalogSource: managed-velero-operator-registry
+          spec:
+            affinity:
+              nodeAffinity:
+                preferredDuringSchedulingIgnoredDuringExecution:
+                - preference:
+                    matchExpressions:
+                    - key: node-role.kubernetes.io/infra
+                      operator: Exists
+                  weight: 1
+            tolerations:
+              - effect: NoSchedule
+                key: node-role.kubernetes.io/infra
+                operator: Exists
+            containers:
+            - image: ${REGISTRY_IMG}@${IMAGE_DIGEST}
+              name: managed-velero-operator-registry
+    - apiVersion: v1
+      kind: Service
+      metadata:
+        name: managed-velero-operator-registry
+        namespace: openshift-velero
+      spec:
+        ports:
+        - name: grpc
+          port: 50051
+          protocol: TCP
+          targetPort: 50051
+        selector:
+          olm.catalogSource: managed-velero-operator-registry
+        sessionAffinity: None
+        type: ClusterIP
     - apiVersion: operators.coreos.com/v1alpha1
       kind: Subscription
       metadata:

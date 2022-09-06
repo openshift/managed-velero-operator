@@ -187,6 +187,8 @@ objects:
       metadata:
         name: managed-velero-operator
         namespace: openshift-velero
+        annotations:
+          olm.operatorframework.io/exclude-global-namespace-resolution: 'true'
       spec:
         targetNamespaces:
         - openshift-velero

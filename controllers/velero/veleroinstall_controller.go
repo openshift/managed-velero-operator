@@ -2,18 +2,21 @@ package velero
 
 import (
 	"context"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"time"
 
 	minterv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
 	velerov1 "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
 
 	appsv1 "k8s.io/api/apps/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	"github.com/operator-framework/operator-lib/handler"
 
 	"github.com/cblecker/platformutils"
 	veleroInstallCR "github.com/openshift/managed-velero-operator/api/v1alpha2"
@@ -90,6 +93,7 @@ func (r *VeleroInstallReconciler) Reconcile(ctx context.Context, request ctrl.Re
 func (r *VeleroInstallReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&veleroInstallCR.VeleroInstall{}).
+		Watches(&source.Kind{Type: &veleroInstallCR.VeleroInstall{}}, &handler.InstrumentedEnqueueRequestForObject{}).
 		Owns(&velerov1.BackupStorageLocation{}).
 		Owns(&velerov1.VolumeSnapshotLocation{}).
 		Owns(&minterv1.CredentialsRequest{}).

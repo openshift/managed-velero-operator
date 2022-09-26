@@ -1,0 +1,194 @@
+apiVersion: v1
+kind: Template
+parameters:
+- name: REGISTRY_IMG
+  required: true
+- name: CHANNEL
+  value: staging
+  required: true
+- name: IMAGE_TAG
+  required: true
+- name: IMAGE_DIGEST
+  required: true
+- name: REPO_NAME
+  value: managed-velero-operator
+  required: true
+- name: DISPLAY_NAME
+  value: Managed Velero Operator
+  required: true
+metadata:
+  name: selectorsyncset-template
+objects:
+- apiVersion: hive.openshift.io/v1
+  kind: SelectorSyncSet
+  metadata:
+    annotations:
+      component-display-name: ${DISPLAY_NAME}
+      component-name: ${REPO_NAME}
+      telemeter-query: csv_succeeded{_id="$CLUSTER_ID",name=~"${REPO_NAME}.*",exported_namespace=~"openshift-.*",namespace="openshift-operator-lifecycle-manager"} == 1
+    labels:
+      managed.openshift.io/gitHash: ${IMAGE_TAG}
+      managed.openshift.io/gitRepoName: ${REPO_NAME}
+      managed.openshift.io/osd: 'true'
+    name: managed-velero-operator
+  spec:
+    clusterDeploymentSelector:
+      matchLabels:
+        api.openshift.com/managed: 'true'
+    resourceApplyMode: Sync
+    resources:
+    - apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: openshift-velero
+        labels:
+          openshift.io/cluster-monitoring: 'true'
+    - apiVersion: v1
+      kind: ServiceAccount
+      metadata:
+        name: velero
+        namespace: openshift-velero
+    - kind: ClusterRoleBinding
+      apiVersion: rbac.authorization.k8s.io/v1
+      metadata:
+        name: velero
+      subjects:
+        - kind: ServiceAccount
+          name: velero
+          namespace: openshift-velero
+      roleRef:
+        kind: ClusterRole
+        name: cluster-admin
+        apiGroup: rbac.authorization.k8s.io
+    - apiVersion: rbac.authorization.k8s.io/v1
+      kind: Role
+      metadata:
+        name: prometheus-k8s
+        namespace: openshift-velero
+      rules:
+      - apiGroups:
+        - ''
+        resources:
+        - services
+        - endpoints
+        - pods
+        verbs:
+        - get
+        - list
+        - watch
+    - apiVersion: rbac.authorization.k8s.io/v1
+      kind: RoleBinding
+      metadata:
+        name: prometheus-k8s
+        namespace: openshift-velero
+      roleRef:
+        kind: Role
+        name: prometheus-k8s
+      subjects:
+      - kind: ServiceAccount
+        name: prometheus-k8s
+        namespace: openshift-monitoring
+    - apiVersion: cloudcredential.openshift.io/v1
+      kind: CredentialsRequest
+      metadata:
+        name: managed-velero-operator-iam-credentials-aws
+        namespace: openshift-velero
+      spec:
+        secretRef:
+          name: managed-velero-operator-iam-credentials
+          namespace: openshift-velero
+        providerSpec:
+          apiVersion: cloudcredential.openshift.io/v1
+          kind: AWSProviderSpec
+          statementEntries:
+          - effect: Allow
+            action:
+            - s3:CreateBucket
+            - s3:DeleteObjectTagging
+            - s3:GetBucketLocation
+            - s3:GetBucketTagging
+            - s3:ListAllMyBuckets
+            - s3:ListBucket
+            - s3:PutBucketAcl
+            - s3:PutBucketPublicAccessBlock
+            - s3:PutBucketTagging
+            - s3:PutEncryptionConfiguration
+            - s3:PutLifecycleConfiguration
+            resource: "*"
+    - apiVersion: cloudcredential.openshift.io/v1
+      kind: CredentialsRequest
+      metadata:
+        name: managed-velero-operator-iam-credentials-gcp
+        namespace: openshift-velero
+      spec:
+        secretRef:
+          name: managed-velero-operator-iam-credentials
+          namespace: openshift-velero
+        providerSpec:
+          apiVersion: cloudcredential.openshift.io/v1
+          kind: GCPProviderSpec
+          predefinedRoles:
+          - roles/storage.admin
+          - roles/iam.serviceAccountUser
+          skipServiceCheck: true
+    - apiVersion: operators.coreos.com/v1alpha1
+      kind: CatalogSource
+      metadata:
+        labels:
+          opsrc-datastore: "true"
+          opsrc-provider: redhat
+        name: managed-velero-operator-registry
+        namespace: openshift-velero
+      spec:
+        image: ${REGISTRY_IMG}@${IMAGE_DIGEST}
+        affinity:
+          nodeAffinity:
+            preferredDuringSchedulingIgnoredDuringExecution:
+            - preference:
+                matchExpressions:
+                - key: node-role.kubernetes.io/infra
+                  operator: Exists
+              weight: 1
+        tolerations:
+          - effect: NoSchedule
+            key: node-role.kubernetes.io/infra
+            operator: Exists
+        displayName: Managed Velero Operator
+        icon:
+          base64data: ''
+          mediatype: ''
+        publisher: Red Hat
+        sourceType: grpc
+    - apiVersion: operators.coreos.com/v1alpha1
+      kind: Subscription
+      metadata:
+        name: managed-velero-operator
+        namespace: openshift-velero
+      spec:
+        channel: ${CHANNEL}
+        name: managed-velero-operator
+        source: managed-velero-operator-registry
+        sourceNamespace: openshift-velero
+        config:
+          volumes:
+          - name: trusted-ca-bundle
+            configMap:
+              name: trusted-ca-bundle
+              defaultMode: 420
+              items:
+                - key: ca-bundle.crt
+                  path: tls-ca-bundle.pem
+          volumeMounts:
+          - name: trusted-ca-bundle
+            mountPath: /etc/pki/ca-trust/extracted/pem
+            readOnly: true
+    - apiVersion: operators.coreos.com/v1alpha2
+      kind: OperatorGroup
+      metadata:
+        name: managed-velero-operator
+        namespace: openshift-velero
+        annotations:
+          olm.operatorframework.io/exclude-global-namespace-resolution: 'true'
+      spec:
+        targetNamespaces:
+        - openshift-velero

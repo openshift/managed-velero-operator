@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/operator-framework/operator-lib/leader"
 	"os"
 	"runtime"
 
@@ -11,8 +12,7 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
-	corev1 "k8s.io/api/core/v1"
-	apiextv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
@@ -26,14 +26,11 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	opmetrics "github.com/openshift/operator-custom-metrics/pkg/metrics"
-	"github.com/operator-framework/operator-lib/leader"
-
 	managedv1alpha2 "github.com/openshift/managed-velero-operator/api/v1alpha2"
 	veleroctrl "github.com/openshift/managed-velero-operator/controllers/velero"
 	"github.com/openshift/managed-velero-operator/pkg/velero"
 	"github.com/openshift/managed-velero-operator/version"
-	//+kubebuilder:scaffold:imports
+	opmetrics "github.com/openshift/operator-custom-metrics/pkg/metrics"
 
 	configv1 "github.com/openshift/api/config/v1"
 	minterv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
@@ -42,13 +39,12 @@ import (
 
 	"github.com/cblecker/platformutils"
 	velerov1 "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
+	//+kubebuilder:scaffold:imports
 )
 
 // Change below variables to serve metrics on different host or port.
 var (
-	metricsHost               = "0.0.0.0"
-	metricsPort         int32 = 8383
-	operatorMetricsPort int32 = 8686
+	metricsPort int32 = 8383
 )
 
 var (
@@ -76,7 +72,7 @@ func init() {
 	utilruntime.Must(configv1.Install(scheme))
 	utilruntime.Must(monitoringv1.AddToScheme(scheme))
 	utilruntime.Must(minterv1.Install(scheme))
-	utilruntime.Must(apiextv1beta1.AddToScheme(scheme))
+	utilruntime.Must(apiextv1.AddToScheme(scheme))
 	utilruntime.Must(velerov1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
@@ -126,6 +122,7 @@ func main() {
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "fcfdbe85.openshift.io",
+		Namespace:              ManagedVeleroOperatorNamespace,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -240,30 +237,25 @@ func addMetrics(ctx context.Context, cl crclient.Client, cfg *rest.Config) error
 		}
 	}
 
-	services := []*corev1.Service{service}
 	mclient := monclientv1.NewForConfigOrDie(cfg)
 	copts := metav1.CreateOptions{}
 
-	for _, s := range services {
-		if s == nil {
-			continue
+	sm := opmetrics.GenerateServiceMonitor(service)
+	// Add CR endpoint
+
+	// ErrSMMetricsExists is used to detect if the -metrics ServiceMonitor already exists
+	var ErrSMMetricsExists = fmt.Sprintf("servicemonitors.monitoring.coreos.com \"%s-metrics\" already exists", OperatorName)
+
+	log.Info(fmt.Sprintf("Attempting to create service monitor %s", sm.Name))
+	// TODO: Get SM and compare to see if an UPDATE is required
+	_, err = mclient.ServiceMonitors(ManagedVeleroOperatorNamespace).Create(ctx, sm, copts)
+	if err != nil {
+		if err.Error() != ErrSMMetricsExists {
+			return err
 		}
-
-		sm := opmetrics.GenerateServiceMonitor(s)
-
-		// ErrSMMetricsExists is used to detect if the -metrics ServiceMonitor already exists
-		var ErrSMMetricsExists = fmt.Sprintf("servicemonitors.monitoring.coreos.com \"%s-metrics\" already exists", OperatorName)
-
-		log.Info(fmt.Sprintf("Attempting to create service monitor %s", sm.Name))
-		// TODO: Get SM and compare to see if an UPDATE is required
-		_, err := mclient.ServiceMonitors(ManagedVeleroOperatorNamespace).Create(ctx, sm, copts)
-		if err != nil {
-			if err.Error() != ErrSMMetricsExists {
-				return err
-			}
-			log.Info("ServiceMonitor already exists")
-		}
-		log.Info(fmt.Sprintf("Successfully configured service monitor %s", sm.Name))
+		log.Info("ServiceMonitor already exists")
 	}
+	log.Info(fmt.Sprintf("Successfully configured service monitor %s", sm.Name))
+
 	return nil
 }

@@ -6,7 +6,7 @@ import (
 
 	"github.com/go-logr/logr"
 	configv1 "github.com/openshift/api/config/v1"
-	veleroInstallCR "github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2"
+	veleroInstallCR "github.com/openshift/managed-velero-operator/api/v1alpha2"
 	"github.com/openshift/managed-velero-operator/pkg/storage/gcs"
 	"github.com/openshift/managed-velero-operator/pkg/storage/s3"
 	"sigs.k8s.io/controller-runtime/pkg/client"

@@ -12,7 +12,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
 	configv1 "github.com/openshift/api/config/v1"
-	veleroInstallCR "github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2"
+	veleroInstallCR "github.com/openshift/managed-velero-operator/api/v1alpha2"
 	storageBase "github.com/openshift/managed-velero-operator/pkg/storage/base"
 	storageConstants "github.com/openshift/managed-velero-operator/pkg/storage/constants"
 	"sigs.k8s.io/controller-runtime/pkg/client"

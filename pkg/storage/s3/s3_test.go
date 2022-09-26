@@ -7,7 +7,7 @@ import (
 
 	"github.com/go-logr/logr"
 
-	velerov1alpha2 "github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2"
+	velerov1alpha2 "github.com/openshift/managed-velero-operator/api/v1alpha2"
 	"github.com/openshift/managed-velero-operator/pkg/storage/constants"
 )
 
@@ -69,7 +69,7 @@ func TestSetInstanceBucketName(t *testing.T) {
 }
 
 // utilities and variables
-var nullLogr = &logr.DiscardLogger{}
+var nullLogr = logr.Discard()
 
 // NB: this file shares a packages with bucket_test.go and all the mock aws client
 // stuff is in there

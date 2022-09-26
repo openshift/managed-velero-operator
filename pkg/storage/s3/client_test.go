@@ -9,7 +9,7 @@ import (
 	k8sClient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	velerov1alpha2 "github.com/openshift/managed-velero-operator/pkg/apis/managed/v1alpha2"
+	velerov1alpha2 "github.com/openshift/managed-velero-operator/api/v1alpha2"
 )
 
 // utils and variables
@@ -36,7 +36,7 @@ func setUpInstance(t *testing.T) *velerov1alpha2.VeleroInstall {
 // setUpTestClient sets up a test kube client loaded with a VeleroInstall instance
 func setUpTestClient(t *testing.T, instance *velerov1alpha2.VeleroInstall) k8sClient.Client {
 	s := scheme.Scheme
-	s.AddKnownTypes(velerov1alpha2.SchemeGroupVersion, instance)
+	s.AddKnownTypes(velerov1alpha2.GroupVersion, instance)
 	objects := []runtime.Object{instance}
 
 	return fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objects...).Build()

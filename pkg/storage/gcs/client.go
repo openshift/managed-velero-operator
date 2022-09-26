@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/googleapis/google-cloud-go-testing/storage/stiface"
+	"github.com/openshift/managed-velero-operator/config"
 	"github.com/openshift/managed-velero-operator/version"
-	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -26,11 +26,7 @@ var (
 func NewGcsClient(kubeClient client.Client) (stiface.Client, error) {
 	var err error
 
-	namespace, err := k8sutil.GetOperatorNamespace()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get operator namespace: %v", err)
-	}
-
+	namespace := config.OperatorNamespace
 	secret := &corev1.Secret{}
 	err = kubeClient.Get(context.TODO(),
 		types.NamespacedName{

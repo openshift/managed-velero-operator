@@ -455,7 +455,7 @@ func veleroDeployment(namespace string, platform configv1.PlatformType, veleroIm
 					{
 						MatchExpressions: []corev1.NodeSelectorRequirement{
 							{
-								Key:      "beta.kubernetes.io/arch",
+								Key:      "kubernetes.io/arch",
 								Operator: corev1.NodeSelectorOpIn,
 								Values:   []string{"amd64"},
 							},

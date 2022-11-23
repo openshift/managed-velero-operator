@@ -8,5 +8,5 @@ updates:
     schedule:
       interval: "daily"
     ignore:
-      - dependency-name: "quay.io/app-sre/boilerplate"
+      - dependency-name: "app-sre/boilerplate"
         # don't upgrade boilerplate via these means

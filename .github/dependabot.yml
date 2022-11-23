@@ -6,7 +6,7 @@ updates:
       - "area/dependency"
       - "ok-to-test"
     schedule:
-      interval: "daily"
+      interval: "weekly"
     ignore:
       - dependency-name: "app-sre/boilerplate"
         # don't upgrade boilerplate via these means

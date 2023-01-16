@@ -1,0 +1,19 @@
+domain: openshift.io
+layout:
+- go.kubebuilder.io/v3
+plugins:
+  manifests.sdk.operatorframework.io/v2: {}
+  scorecard.sdk.operatorframework.io/v2: {}
+projectName: managed-velero-migrate
+repo: github.com/openshift/managed-velero-operator
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: openshift.io
+  group: managed
+  kind: VeleroInstall
+  path: github.com/openshift/managed-velero-operator/api/v1alpha2
+  version: v1alpha2
+version: "3"

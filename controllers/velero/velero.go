@@ -39,7 +39,7 @@ const (
 	veleroAwsImageTag = "velero-plugin-for-aws@sha256:7c22d5ae59862a66bac77e3fb48e6cd9c1556e4c9d7277aad4f093a198cb4373" // quay.io/konveyor/velero-plugin-for-aws:oadp-1.0.1-amd64
 	veleroGcpImageTag = "velero-plugin-for-gcp@sha256:4633343934e8a2163b6738c8572d339efbe0c44229e0d2af4e3b00ad5239446e" // quay.io/konveyor/velero-plugin-for-gcp:oadp-1.0.1-amd64
 
-	credentialsRequestName = "velero-iam-credentials"
+	credentialsRequestName = "velero-iam-credentials" // #nosec G101
 )
 
 func (r *VeleroInstallReconciler) provisionVelero(reqLogger logr.Logger, namespace string, platformStatus *configv1.PlatformStatus, instance *veleroInstallCR.VeleroInstall) (reconcile.Result, error) {

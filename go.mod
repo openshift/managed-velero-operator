@@ -17,7 +17,6 @@ require (
 	github.com/googleapis/google-cloud-go-testing v0.0.0-20200911160855-bcd43fbb19e8
 	github.com/openshift/operator-custom-metrics v0.5.1-0.20220802235640-dc76a1f15ee8
 	github.com/operator-framework/operator-lib v0.11.0
-	github.com/prometheus-operator/prometheus-operator v0.42.1
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.55.0
 	golang.org/x/oauth2 v0.0.0-20220822191816-0ebed06d0094
 	google.golang.org/api v0.56.0

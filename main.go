@@ -4,17 +4,19 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/operator-framework/operator-lib/leader"
 	"os"
+	"reflect"
 	"runtime"
+
+	"github.com/operator-framework/operator-lib/leader"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	corev1 "k8s.io/api/core/v1"
 	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -35,7 +37,6 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	minterv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
-	monclientv1 "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned/typed/monitoring/v1"
 
 	"github.com/cblecker/platformutils"
 	velerov1 "github.com/vmware-tanzu/velero/pkg/apis/velero/v1"
@@ -150,7 +151,7 @@ func main() {
 		log.Error(err, "Unable to create operator startup client")
 		os.Exit(1)
 	}
-	pc, err := platformutils.NewClient(context.TODO())
+	pc, err := platformutils.NewClient(ctx)
 	if err != nil {
 		log.Error(err, "Unable to create platformutils client")
 		os.Exit(1)
@@ -220,42 +221,70 @@ func getWatchNamespace() (string, error) {
 // addMetrics will create the Services and Service Monitors to allow the operator export the metrics by using
 // the Prometheus operator
 func addMetrics(ctx context.Context, cl crclient.Client, cfg *rest.Config) error {
+	foundService := &corev1.Service{}
 	service, err := opmetrics.GenerateService(metricsPort, "http-metrics", OperatorName+"-metrics", ManagedVeleroOperatorNamespace, map[string]string{"name": OperatorName})
 	if err != nil {
-		log.Info("Could not create metrics Service", "error", err.Error())
+		log.Error(err, "Could not generate metrics service")
 		return err
 	}
-
-	log.Info(fmt.Sprintf("Attempting to create service %s", service.Name))
-	err = cl.Create(ctx, service)
-	if err != nil {
-		if !apierrors.IsAlreadyExists(err) {
-			log.Error(err, "Could not create metrics service")
-			return err
+	if err = cl.Get(ctx, crclient.ObjectKeyFromObject(service), foundService); err != nil {
+		if apierrors.IsNotFound(err) {
+			// Didn't find metrics service, so create it
+			log.Info("Creating metrics service")
+			if err = cl.Create(ctx, service); err != nil {
+				log.Error(err, "Could not create metrics service")
+				return err
+			}
 		} else {
-			log.Info("Metrics service already exists, will not create")
-		}
-	}
-
-	mclient := monclientv1.NewForConfigOrDie(cfg)
-	copts := metav1.CreateOptions{}
-
-	sm := opmetrics.GenerateServiceMonitor(service)
-	// Add CR endpoint
-
-	// ErrSMMetricsExists is used to detect if the -metrics ServiceMonitor already exists
-	var ErrSMMetricsExists = fmt.Sprintf("servicemonitors.monitoring.coreos.com \"%s-metrics\" already exists", OperatorName)
-
-	log.Info(fmt.Sprintf("Attempting to create service monitor %s", sm.Name))
-	// TODO: Get SM and compare to see if an UPDATE is required
-	_, err = mclient.ServiceMonitors(ManagedVeleroOperatorNamespace).Create(ctx, sm, copts)
-	if err != nil {
-		if err.Error() != ErrSMMetricsExists {
+			log.Error(err, "Could not get existing metrics service")
 			return err
 		}
-		log.Info("ServiceMonitor already exists")
+	} else {
+		// Service exists, check if it's updated.
+		// Note: We leave fields related to cluster IP address, IPv6, and
+		// InternalTrafficPolicy alone.
+		service.Spec.ClusterIP = foundService.Spec.ClusterIP
+		service.Spec.ClusterIPs = foundService.Spec.ClusterIPs
+		service.Spec.IPFamilies = foundService.Spec.IPFamilies
+		service.Spec.IPFamilyPolicy = foundService.Spec.IPFamilyPolicy
+		service.Spec.InternalTrafficPolicy = foundService.Spec.InternalTrafficPolicy
+		if !reflect.DeepEqual(foundService.Spec, service.Spec) {
+			// Specs aren't equal, update and fix.
+			log.Info("Updating metrics service", "foundService.Spec", foundService.Spec, "service.Spec", service.Spec)
+			foundService.Spec = *service.Spec.DeepCopy()
+			if err = cl.Update(ctx, foundService); err != nil {
+				log.Error(err, "Could not update metrics service")
+				return err
+			}
+		}
 	}
-	log.Info(fmt.Sprintf("Successfully configured service monitor %s", sm.Name))
+
+	foundServiceMonitor := &monitoringv1.ServiceMonitor{}
+	serviceMonitor := opmetrics.GenerateServiceMonitor(service)
+	if err = cl.Get(ctx, crclient.ObjectKeyFromObject(serviceMonitor), foundServiceMonitor); err != nil {
+		if apierrors.IsNotFound(err) {
+			// Didn't find service monitor, so create it
+			log.Info("Creating service monitor")
+			if err = cl.Create(ctx, serviceMonitor); err != nil {
+				log.Error(err, "Could not create service monitor")
+				return err
+			}
+		} else {
+			log.Error(err, "Could not get existing service monitor")
+			return err
+		}
+	} else {
+		// ServiceMonitor exists, check if it's updated.
+		if !reflect.DeepEqual(foundServiceMonitor.Spec, serviceMonitor.Spec) {
+			// Specs aren't equal, update and fix.
+			log.Info("Updating service monitor", "foundServiceMonitor.Spec", foundServiceMonitor.Spec, "serviceMonitor.Spec", serviceMonitor.Spec)
+			foundServiceMonitor.Spec = *serviceMonitor.Spec.DeepCopy()
+			if err = cl.Update(ctx, foundServiceMonitor); err != nil {
+				log.Error(err, "Could not update service monitor")
+				return err
+			}
+		}
+	}
 
 	return nil
 }

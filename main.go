@@ -223,6 +223,8 @@ func getWatchNamespace() (string, error) {
 func addMetrics(ctx context.Context, cl crclient.Client, cfg *rest.Config) error {
 	foundService := &corev1.Service{}
 	service, err := opmetrics.GenerateService(metricsPort, "http-metrics", OperatorName+"-metrics", ManagedVeleroOperatorNamespace, map[string]string{"name": OperatorName})
+	service.Spec.SessionAffinity = corev1.ServiceAffinityNone // Set session affinity to None (default)
+	service.Spec.Type = corev1.ServiceTypeClusterIP           // Set service type to ClusterIP (default)
 	if err != nil {
 		log.Error(err, "Could not generate metrics service")
 		return err

@@ -33,8 +33,15 @@ objects:
     name: managed-velero-operator
   spec:
     clusterDeploymentSelector:
-      matchLabels:
-        api.openshift.com/managed: 'true'
+      matchExpressions:
+      - key: api.openshift.com/managed
+        operator: In
+        values:
+        - 'true'
+      - key: ext-velero.managed.openshift.io/enabled
+        operator: NotIn
+        values:
+        - 'false'
     resourceApplyMode: Sync
     resources:
     - apiVersion: v1

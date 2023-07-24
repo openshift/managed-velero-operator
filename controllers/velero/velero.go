@@ -413,6 +413,7 @@ func veleroDeployment(namespace string, platform configv1.PlatformType, veleroIm
 	deployment.Spec.Template.Spec.Containers[0].Ports[0].Protocol = "TCP"
 	deployment.Spec.Template.Spec.Containers[0].TerminationMessagePath = "/dev/termination-log"
 	deployment.Spec.Template.Spec.Containers[0].TerminationMessagePolicy = "File"
+	deployment.Spec.Template.Spec.DeprecatedServiceAccount = "velero"
 	deployment.Spec.Template.Spec.ServiceAccountName = "velero"
 	deployment.Spec.Template.Spec.DNSPolicy = "ClusterFirst"
 	deployment.Spec.Template.Spec.SchedulerName = "default-scheduler"

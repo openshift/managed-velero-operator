@@ -19,7 +19,7 @@ func TestInstallVeleroCRDs(t *testing.T) {
 		t.Errorf("unexpected error returned when installing CRDs: %v", err)
 	}
 
-	for _, unstructuredCrd := range veleroInstall.AllCRDs("v1").Items {
+	for _, unstructuredCrd := range veleroInstall.AllCRDs().Items {
 		foundCrd := &apiv1.CustomResourceDefinition{}
 		err = fakeClient.Get(context.TODO(), types.NamespacedName{Name: unstructuredCrd.GetName()}, foundCrd)
 		if err != nil {
@@ -33,7 +33,7 @@ func TestInstallVeleroCRDswithExistingCRDs(t *testing.T) {
 	fakeClient := fake.NewClientBuilder().Build()
 
 	crd := &apiv1.CustomResourceDefinition{}
-	crd.ObjectMeta.Name = veleroInstall.AllCRDs("v1").Items[1].GetName()
+	crd.ObjectMeta.Name = veleroInstall.AllCRDs().Items[1].GetName()
 	if err := fakeClient.Create(context.TODO(), crd); err != nil {
 		t.Fatalf("pre-condition failed: create an existing crd on the cluster: %e", err)
 	}

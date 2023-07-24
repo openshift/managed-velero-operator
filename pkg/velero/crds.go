@@ -19,7 +19,7 @@ func InstallVeleroCRDs(log logr.Logger, client client.Client) error {
 	var err error
 
 	// Install CRDs
-	for _, unstructuredCrd := range veleroInstall.AllCRDs("v1").Items {
+	for _, unstructuredCrd := range veleroInstall.AllCRDs().Items {
 		// Get upstream crds
 		crd := &apiv1.CustomResourceDefinition{}
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(unstructuredCrd.Object, crd); err != nil {

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	veleroInstallCR "github.com/openshift/managed-velero-operator/api/v1alpha2"
+	"github.com/openshift/managed-velero-operator/version"
 
 	configv1 "github.com/openshift/api/config/v1"
 	minterv1 "github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1"
@@ -34,10 +35,6 @@ const (
 	awsCredsSecretAccessKey = "aws_secret_access_key" // #nosec G101
 
 	veleroImageRegistry = "quay.io/konveyor"
-
-	veleroImageTag    = "velero@sha256:6abd52244096680eeb3c80289999a00f642069edcd3d2e6c6948317b4bdd9bcd"                // quay.io/konveyor/velero:oadp-1.0.1-amd64
-	veleroAwsImageTag = "velero-plugin-for-aws@sha256:7c22d5ae59862a66bac77e3fb48e6cd9c1556e4c9d7277aad4f093a198cb4373" // quay.io/konveyor/velero-plugin-for-aws:oadp-1.0.1-amd64
-	veleroGcpImageTag = "velero-plugin-for-gcp@sha256:4633343934e8a2163b6738c8572d339efbe0c44229e0d2af4e3b00ad5239446e" // quay.io/konveyor/velero-plugin-for-gcp:oadp-1.0.1-amd64
 
 	credentialsRequestName = "velero-iam-credentials" // #nosec G101
 )
@@ -360,15 +357,15 @@ func veleroDeployment(namespace string, platform configv1.PlatformType, veleroIm
 			veleroInstall.WithEnvFromSecretKey(strings.ToUpper(awsCredsSecretAccessKey), credentialsRequestName, awsCredsSecretAccessKey),
 			//TODO(cblecker): fix resources
 			// veleroInstall.WithResources(veleroPodResources),
-			veleroInstall.WithPlugins([]string{veleroImageRegistry + "/" + veleroAwsImageTag}),
-			veleroInstall.WithImage(veleroImageRegistry+"/"+veleroImageTag),
+			veleroInstall.WithPlugins([]string{veleroImageRegistry + "/" + version.VeleroAwsImageTag}),
+			veleroInstall.WithImage(veleroImageRegistry+"/"+version.VeleroImageTag),
 		)
 	case configv1.GCPPlatformType:
 		deployment = veleroInstall.Deployment(namespace,
 			//TODO(cblecker): fix resources
 			// veleroInstall.WithResources(veleroPodResources),
-			veleroInstall.WithPlugins([]string{veleroImageRegistry + "/" + veleroGcpImageTag}),
-			veleroInstall.WithImage(veleroImageRegistry+"/"+veleroImageTag),
+			veleroInstall.WithPlugins([]string{veleroImageRegistry + "/" + version.VeleroGcpImageTag}),
+			veleroInstall.WithImage(veleroImageRegistry+"/"+version.VeleroImageTag),
 		)
 		defaultMode := int32(420)
 		deployment.Spec.Template.Spec.Volumes = append(

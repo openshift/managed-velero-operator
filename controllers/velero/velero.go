@@ -34,7 +34,7 @@ const (
 	awsCredsSecretIDKey     = "aws_access_key_id"     // #nosec G101
 	awsCredsSecretAccessKey = "aws_secret_access_key" // #nosec G101
 
-	veleroImageRegistry = "quay.io/konveyor"
+	veleroImageRegistry = "registry.redhat.io/oadp"
 
 	credentialsRequestName = "velero-iam-credentials" // #nosec G101
 )

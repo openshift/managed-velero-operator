@@ -8,7 +8,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/openshift/api v0.0.0-20230414143018-3367bc7e6ac7 // release-4.13
 	github.com/openshift/cloud-credential-operator v0.0.0-20230605122545-0621fcaf818f // release-4.13
-	github.com/vmware-tanzu/velero v1.10.2
+	github.com/vmware-tanzu/velero v1.11.0
 	google.golang.org/api v0.133.0
 )
 

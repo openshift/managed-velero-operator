@@ -6,7 +6,7 @@ var (
 
 const (
 	OperatorName      = "managed-velero-operator"
-	VeleroImageTag    = "velero@sha256:a60096c63ed34621a3d6fc69a02a25b1e1edb4396af891de98b0bcc91120231e"                // quay.io/konveyor/velero:oadp-1.2-amd64
-	VeleroAwsImageTag = "velero-plugin-for-aws@sha256:a9259c6fb71a7ac7d50845cf3d79dfc683700156ab8011c40d5f092c85818f64" // quay.io/konveyor/velero-plugin-for-aws:oadp-1.2-amd64
-	VeleroGcpImageTag = "velero-plugin-for-gcp@sha256:85a9d667ce44855bd1955ba1438c394e44c926d827520914f160d288f48a2525" // quay.io/konveyor/velero-plugin-for-gcp:oadp-1.2-amd64
+	VeleroImageTag    = "oadp-velero-rhel8@sha256:bdf6c3b957c8e4b02d83559c03a4cbbb08fd893eed6f3b04f9164cdddf9c3868"                // registry.redhat.io/oadp/oadp-velero-rhel8:1.2.0-37
+	VeleroAwsImageTag = "oadp-velero-plugin-for-aws-rhel8@sha256:2ae11ce320b0383bb2fc98eaf8b70d8ffa3269b0c0b83d80598d65a25aa1190f" // registry.redhat.io/oadp/oadp-velero-plugin-for-aws-rhel8:1.2.0-21
+	VeleroGcpImageTag = "oadp-velero-plugin-for-gcp-rhel8@sha256:42b3c8b0f027a96fef8aaa913ea73537a84667284f198309ae76c4693a564851" // registry.redhat.io/oadp/oadp-velero-plugin-for-gcp-rhel8:1.2.0-22
 )

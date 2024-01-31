@@ -20,7 +20,6 @@ aliases:
     - rojasreinold
   srep-functional-team-hulk:
     - a7vicky
-    - jwai7
     - rendhalver
     - ravitri
     - shitaljante
@@ -34,7 +33,6 @@ aliases:
     - ninabauer
     - RaphaelBut
     - Tessg22
-    - thavlice
   srep-functional-team-rocket:
     - aliceh
     - anispate
@@ -48,12 +46,12 @@ aliases:
     - jaybeeunix
     - sam-nguyen7
     - wshearn
+    - SamuelSidakwo
   srep-functional-team-thor:
     - bmeng
     - MitaliBhalla
     - hectorakemp
     - feichashao
-    - supreeth7
     - Tafhim
     - samanthajayasinghe
   srep-functional-team-v1alpha1:
@@ -79,6 +77,10 @@ aliases:
     - fahlmant
     - dustman9000
     - wanghaoran1988
+  sre-group-leads:
+    - apahim
+    - maorfr
+    - rogbas
   srep-architects:
     - jewzaam
     - jharrington22

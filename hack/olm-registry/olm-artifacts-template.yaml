@@ -39,6 +39,9 @@ objects:
         - key: api.openshift.com/sts
           operator: NotIn
           values: ["true"]
+        - key: api.openshift.com/wif
+          operator: NotIn
+          values: ["true"]
     resourceApplyMode: Sync
     resources:
     - apiVersion: v1

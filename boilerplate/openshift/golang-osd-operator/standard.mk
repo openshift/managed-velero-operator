@@ -43,7 +43,7 @@ endif
 # Generate version and tag information from inputs
 COMMIT_NUMBER=$(shell git rev-list `git rev-list --parents HEAD | grep -E "^[a-f0-9]{40}$$"`..HEAD --count)
 CURRENT_COMMIT=$(shell git rev-parse --short=7 HEAD)
-OPERATOR_VERSION=$(VERSION_MAJOR).$(VERSION_MINOR).$(COMMIT_NUMBER)-$(CURRENT_COMMIT)
+OPERATOR_VERSION=$(VERSION_MAJOR).$(VERSION_MINOR).$(COMMIT_NUMBER)-g$(CURRENT_COMMIT)
 
 OPERATOR_IMAGE=$(IMAGE_REGISTRY)/$(IMAGE_REPOSITORY)/$(IMAGE_NAME)
 OPERATOR_IMAGE_TAG=v$(OPERATOR_VERSION)
@@ -52,6 +52,7 @@ OPERATOR_IMAGE_URI=${IMG}
 OPERATOR_IMAGE_URI_LATEST=$(IMAGE_REGISTRY)/$(IMAGE_REPOSITORY)/$(IMAGE_NAME):latest
 OPERATOR_DOCKERFILE ?=build/Dockerfile
 REGISTRY_IMAGE=$(IMAGE_REGISTRY)/$(IMAGE_REPOSITORY)/$(IMAGE_NAME)-registry
+OPERATOR_REPO_NAME=$(shell git config --get remote.origin.url | sed 's,.*/,,; s/\.git$$//')
 
 ifeq ($(SUPPLEMENTARY_IMAGE_NAME),)
 # We need SUPPLEMENTARY_IMAGE to be defined for csv-generate.mk
@@ -122,7 +123,7 @@ GOLANGCI_LINT_CACHE ?= /tmp/golangci-cache
 GOLANGCI_OPTIONAL_CONFIG ?=
 
 ifeq ($(origin TESTTARGETS), undefined)
-TESTTARGETS := $(shell ${GOENV} go list -e ./... | grep -E -v "/(vendor)/" | grep -E -v "/(osde2e)/")
+TESTTARGETS := $(shell ${GOENV} go list -e ./... | grep -E -v "/(vendor)/" | grep -E -v "/(test/e2e)/")
 endif
 # ex, -v
 TESTOPTS :=
@@ -327,7 +328,7 @@ build-push:
 	${CONVENTION_DIR}/app-sre-build-deploy.sh ${REGISTRY_IMAGE} ${CURRENT_COMMIT} "$$IMAGES_TO_BUILD"
 
 .PHONY: opm-build-push
-opm-build-push: docker-push
+opm-build-push: python-venv docker-push
 	OLM_BUNDLE_IMAGE="${OLM_BUNDLE_IMAGE}" \
 	OLM_CATALOG_IMAGE="${OLM_CATALOG_IMAGE}" \
 	CONTAINER_ENGINE="${CONTAINER_ENGINE}" \
@@ -385,8 +386,9 @@ container-coverage:
 .PHONY: rvmo-bundle
 rvmo-bundle:
 	RELEASE_BRANCH=$(RELEASE_BRANCH) \
+	REPO_NAME=$(OPERATOR_REPO_NAME) \
 	OPERATOR_NAME=$(OPERATOR_NAME) \
 	OPERATOR_VERSION=$(OPERATOR_VERSION) \
 	OPERATOR_OLM_REGISTRY_IMAGE=$(REGISTRY_IMAGE) \
-	TEMPLATE_FILE=$(abspath hack/artifacts/olm-artifacts-template.gotmpl) \
+	TEMPLATE_DIR=$(abspath hack/release-bundle) \
 	bash ${CONVENTION_DIR}/rvmo-bundle.sh

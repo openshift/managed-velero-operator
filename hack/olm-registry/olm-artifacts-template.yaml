@@ -43,6 +43,7 @@ objects:
           operator: NotIn
           values: ["true"]
     resourceApplyMode: Sync
+    applyBehavior: CreateOrUpdate
     resources:
     - apiVersion: v1
       kind: Namespace

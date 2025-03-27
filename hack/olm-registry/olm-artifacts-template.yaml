@@ -60,7 +60,7 @@ objects:
       kind: ServiceAccount
       metadata:
         name: prometheus-k8s-test-user
-        namespace: openshift-velero
+        namespace: openshift-monitoring
     - kind: ClusterRoleBinding
       apiVersion: rbac.authorization.k8s.io/v1
       metadata:

@@ -60,14 +60,14 @@ func (r *VeleroInstallReconciler) provisionVelero(reqLogger logr.Logger, namespa
 	foundBsl := &velerov1.BackupStorageLocation{}
 	var caCertData []byte
 	bsl := veleroInstall.BackupStorageLocation(namespace, provider, instance.Status.StorageBucket.Name, "", locationConfig, caCertData)
-	if err = r.Client.Get(context.TODO(), runtimeClient.ObjectKeyFromObject(bsl), foundBsl); err != nil {
+	if err = r.Get(context.TODO(), runtimeClient.ObjectKeyFromObject(bsl), foundBsl); err != nil {
 		if errors.IsNotFound(err) {
 			// Didn't find BackupStorageLocation
 			reqLogger.Info("Creating BackupStorageLocation")
 			if err := controllerutil.SetControllerReference(instance, bsl, r.Scheme); err != nil {
 				return reconcile.Result{}, err
 			}
-			if err = r.Client.Create(context.TODO(), bsl); err != nil {
+			if err = r.Create(context.TODO(), bsl); err != nil {
 				return reconcile.Result{}, err
 			}
 		} else {
@@ -79,7 +79,7 @@ func (r *VeleroInstallReconciler) provisionVelero(reqLogger logr.Logger, namespa
 			// Specs aren't equal, update and fix.
 			reqLogger.Info("Updating BackupStorageLocation", "foundBsl.Spec", foundBsl.Spec, "bsl.Spec", bsl.Spec)
 			foundBsl.Spec = *bsl.Spec.DeepCopy()
-			if err = r.Client.Update(context.TODO(), foundBsl); err != nil {
+			if err = r.Update(context.TODO(), foundBsl); err != nil {
 				return reconcile.Result{}, err
 			}
 		}
@@ -88,14 +88,14 @@ func (r *VeleroInstallReconciler) provisionVelero(reqLogger logr.Logger, namespa
 	// Install VolumeSnapshotLocation
 	foundVsl := &velerov1.VolumeSnapshotLocation{}
 	vsl := veleroInstall.VolumeSnapshotLocation(namespace, provider, locationConfig)
-	if err = r.Client.Get(context.TODO(), runtimeClient.ObjectKeyFromObject(vsl), foundVsl); err != nil {
+	if err = r.Get(context.TODO(), runtimeClient.ObjectKeyFromObject(vsl), foundVsl); err != nil {
 		if errors.IsNotFound(err) {
 			// Didn't find VolumeSnapshotLocation
 			reqLogger.Info("Creating VolumeSnapshotLocation")
 			if err := controllerutil.SetControllerReference(instance, vsl, r.Scheme); err != nil {
 				return reconcile.Result{}, err
 			}
-			if err = r.Client.Create(context.TODO(), vsl); err != nil {
+			if err = r.Create(context.TODO(), vsl); err != nil {
 				return reconcile.Result{}, err
 			}
 		} else {
@@ -107,7 +107,7 @@ func (r *VeleroInstallReconciler) provisionVelero(reqLogger logr.Logger, namespa
 			// Specs aren't equal, update and fix.
 			reqLogger.Info("Updating VolumeSnapshotLocation", "foundVsl.Spec", foundVsl.Spec, "vsl.Spec", vsl.Spec)
 			foundVsl.Spec = *vsl.Spec.DeepCopy()
-			if err = r.Client.Update(context.TODO(), foundVsl); err != nil {
+			if err = r.Update(context.TODO(), foundVsl); err != nil {
 				return reconcile.Result{}, err
 			}
 		}
@@ -128,14 +128,14 @@ func (r *VeleroInstallReconciler) provisionVelero(reqLogger logr.Logger, namespa
 	default:
 		return reconcile.Result{}, fmt.Errorf("unable to determine platform")
 	}
-	if err = r.Client.Get(context.TODO(), runtimeClient.ObjectKeyFromObject(cr), foundCr); err != nil {
+	if err = r.Get(context.TODO(), runtimeClient.ObjectKeyFromObject(cr), foundCr); err != nil {
 		if errors.IsNotFound(err) {
 			// Didn't find CredentialsRequest
 			reqLogger.Info("Creating CredentialsRequest")
 			if err := controllerutil.SetControllerReference(instance, cr, r.Scheme); err != nil {
 				return reconcile.Result{}, err
 			}
-			if err = r.Client.Create(context.TODO(), cr); err != nil {
+			if err = r.Create(context.TODO(), cr); err != nil {
 				return reconcile.Result{}, err
 			}
 		} else {
@@ -151,7 +151,7 @@ func (r *VeleroInstallReconciler) provisionVelero(reqLogger logr.Logger, namespa
 			// Specs aren't equal, update and fix.
 			reqLogger.Info("Updating CredentialsRequest", "foundCr.Spec", foundCr.Spec, "cr.Spec", cr.Spec)
 			foundCr.Spec = *cr.Spec.DeepCopy()
-			if err = r.Client.Update(context.TODO(), foundCr); err != nil {
+			if err = r.Update(context.TODO(), foundCr); err != nil {
 				return reconcile.Result{}, err
 			}
 		}
@@ -160,14 +160,14 @@ func (r *VeleroInstallReconciler) provisionVelero(reqLogger logr.Logger, namespa
 	// Install Deployment
 	foundDeployment := &appsv1.Deployment{}
 	deployment := veleroDeployment(namespace, r.driver.GetPlatformType(), veleroImageRegistry)
-	if err = r.Client.Get(context.TODO(), runtimeClient.ObjectKeyFromObject(deployment), foundDeployment); err != nil {
+	if err = r.Get(context.TODO(), runtimeClient.ObjectKeyFromObject(deployment), foundDeployment); err != nil {
 		if errors.IsNotFound(err) {
 			// Didn't find Deployment
 			reqLogger.Info("Creating Deployment")
 			if err := controllerutil.SetControllerReference(instance, deployment, r.Scheme); err != nil {
 				return reconcile.Result{}, err
 			}
-			if err = r.Client.Create(context.TODO(), deployment); err != nil {
+			if err = r.Create(context.TODO(), deployment); err != nil {
 				return reconcile.Result{}, err
 			}
 		} else {
@@ -179,7 +179,7 @@ func (r *VeleroInstallReconciler) provisionVelero(reqLogger logr.Logger, namespa
 			// Specs aren't equal, update and fix.
 			reqLogger.Info("Updating Deployment", "foundDeployment.Spec", foundDeployment.Spec, "deployment.Spec", deployment.Spec)
 			foundDeployment.Spec = *deployment.Spec.DeepCopy()
-			if err = r.Client.Update(context.TODO(), foundDeployment); err != nil {
+			if err = r.Update(context.TODO(), foundDeployment); err != nil {
 				return reconcile.Result{}, err
 			}
 		}
@@ -188,14 +188,14 @@ func (r *VeleroInstallReconciler) provisionVelero(reqLogger logr.Logger, namespa
 	// Install Metrics Service
 	foundService := &corev1.Service{}
 	service := metricsServiceFromDeployment(deployment)
-	if err = r.Client.Get(context.TODO(), runtimeClient.ObjectKeyFromObject(service), foundService); err != nil {
+	if err = r.Get(context.TODO(), runtimeClient.ObjectKeyFromObject(service), foundService); err != nil {
 		if errors.IsNotFound(err) {
 			// Didn't find Service
 			reqLogger.Info("Creating Service")
 			if err := controllerutil.SetControllerReference(instance, service, r.Scheme); err != nil {
 				return reconcile.Result{}, err
 			}
-			if err = r.Client.Create(context.TODO(), service); err != nil {
+			if err = r.Create(context.TODO(), service); err != nil {
 				return reconcile.Result{}, err
 			}
 			// We need a populated foundService (with a UID) to generate the
@@ -216,7 +216,7 @@ func (r *VeleroInstallReconciler) provisionVelero(reqLogger logr.Logger, namespa
 		// Specs aren't equal, update and fix.
 		reqLogger.Info("Updating Service", "foundService.Spec", foundService.Spec, "service.Spec", service.Spec)
 		foundService.Spec = *service.Spec.DeepCopy()
-		if err = r.Client.Update(context.TODO(), foundService); err != nil {
+		if err = r.Update(context.TODO(), foundService); err != nil {
 			return reconcile.Result{}, err
 		}
 	}
@@ -224,12 +224,12 @@ func (r *VeleroInstallReconciler) provisionVelero(reqLogger logr.Logger, namespa
 	// Install Metrics ServiceMonitor
 	foundServiceMonitor := &monitoringv1.ServiceMonitor{}
 	serviceMonitor := generateServiceMonitor(foundService)
-	if err = r.Client.Get(context.TODO(), runtimeClient.ObjectKeyFromObject(serviceMonitor), foundServiceMonitor); err != nil {
+	if err = r.Get(context.TODO(), runtimeClient.ObjectKeyFromObject(serviceMonitor), foundServiceMonitor); err != nil {
 		if errors.IsNotFound(err) {
 			// Didn't find ServiceMonitor
 			reqLogger.Info("Creating ServiceMonitor")
 			// Note, generateServiceMonitor already set an owner reference.
-			if err = r.Client.Create(context.TODO(), serviceMonitor); err != nil {
+			if err = r.Create(context.TODO(), serviceMonitor); err != nil {
 				return reconcile.Result{}, err
 			}
 		} else {
@@ -241,7 +241,7 @@ func (r *VeleroInstallReconciler) provisionVelero(reqLogger logr.Logger, namespa
 			// Specs aren't equal, update and fix.
 			reqLogger.Info("Updating ServiceMonitor", "foundServiceMonitor.Spec", foundServiceMonitor.Spec, "serviceMonitor.Spec", serviceMonitor.Spec)
 			foundServiceMonitor.Spec = *serviceMonitor.Spec.DeepCopy()
-			if err = r.Client.Update(context.TODO(), foundServiceMonitor); err != nil {
+			if err = r.Update(context.TODO(), foundServiceMonitor); err != nil {
 				return reconcile.Result{}, err
 			}
 		}
@@ -517,7 +517,7 @@ func metricsServiceFromDeployment(deployment *appsv1.Deployment) *corev1.Service
 	// Copy labels from the deployment's pod template.
 	serviceSelector := make(map[string]string)
 	// XXX Looping in lieu of an ObjectMeta.CopyLabels() method.
-	for k, v := range deployment.Spec.Template.ObjectMeta.Labels {
+	for k, v := range deployment.Spec.Template.Labels {
 		serviceSelector[k] = v
 	}
 
@@ -527,9 +527,9 @@ func metricsServiceFromDeployment(deployment *appsv1.Deployment) *corev1.Service
 			APIVersion: corev1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      deployment.ObjectMeta.Name + "-metrics",
-			Namespace: deployment.ObjectMeta.Namespace,
-			Labels:    map[string]string{"name": deployment.ObjectMeta.Name},
+			Name:      deployment.Name + "-metrics",
+			Namespace: deployment.Namespace,
+			Labels:    map[string]string{"name": deployment.Name},
 		},
 		Spec: corev1.ServiceSpec{
 			Ports:           servicePorts,
@@ -583,7 +583,7 @@ func credentialsRequestSpecEqual(x, y minterv1.CredentialsRequestSpec) (bool, er
 // based on the passed Service object.
 func generateServiceMonitor(s *corev1.Service) *monitoringv1.ServiceMonitor {
 	labels := make(map[string]string)
-	for k, v := range s.ObjectMeta.Labels {
+	for k, v := range s.Labels {
 		labels[k] = v
 	}
 	endpoints := populateEndpointsFromServicePorts(s)
@@ -591,8 +591,8 @@ func generateServiceMonitor(s *corev1.Service) *monitoringv1.ServiceMonitor {
 
 	return &monitoringv1.ServiceMonitor{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      s.ObjectMeta.Name,
-			Namespace: s.ObjectMeta.Namespace,
+			Name:      s.Name,
+			Namespace: s.Namespace,
 			Labels:    labels,
 			OwnerReferences: []metav1.OwnerReference{
 				{

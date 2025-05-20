@@ -33,7 +33,7 @@ func TestInstallVeleroCRDswithExistingCRDs(t *testing.T) {
 	fakeClient := fake.NewClientBuilder().Build()
 
 	crd := &apiv1.CustomResourceDefinition{}
-	crd.ObjectMeta.Name = veleroInstall.AllCRDs().Items[1].GetName()
+	crd.Name = veleroInstall.AllCRDs().Items[1].GetName()
 	if err := fakeClient.Create(context.TODO(), crd); err != nil {
 		t.Fatalf("pre-condition failed: create an existing crd on the cluster: %e", err)
 	}

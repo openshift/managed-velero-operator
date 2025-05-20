@@ -42,11 +42,11 @@ func TestGenerateServiceMonitor(t *testing.T) {
 	input := exampleService
 	output := generateServiceMonitor(input)
 
-	if !reflect.DeepEqual(input.ObjectMeta.Labels, output.ObjectMeta.Labels) {
-		t.Errorf("Metadata label sets don't match: got %v, want %v", output.ObjectMeta.Labels, input.ObjectMeta.Labels)
+	if !reflect.DeepEqual(input.Labels, output.Labels) {
+		t.Errorf("Metadata label sets don't match: got %v, want %v", output.Labels, input.Labels)
 	}
-	if !reflect.DeepEqual(input.ObjectMeta.Labels, output.Spec.Selector.MatchLabels) {
-		t.Errorf("Selector label sets don't match: got %v, want %v", output.ObjectMeta.Labels, input.ObjectMeta.Labels)
+	if !reflect.DeepEqual(input.Labels, output.Spec.Selector.MatchLabels) {
+		t.Errorf("Selector label sets don't match: got %v, want %v", output.Labels, input.Labels)
 	}
 }
 

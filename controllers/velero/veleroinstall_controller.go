@@ -48,7 +48,7 @@ func (r *VeleroInstallReconciler) Reconcile(ctx context.Context, request ctrl.Re
 
 	// Fetch the Velero instance
 	instance := &veleroInstallCR.VeleroInstall{}
-	err = r.Client.Get(ctx, request.NamespacedName, instance)
+	err = r.Get(ctx, request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.

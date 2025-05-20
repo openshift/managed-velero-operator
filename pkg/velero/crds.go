@@ -33,10 +33,10 @@ func InstallVeleroCRDs(log logr.Logger, client client.Client) error {
 
 		// Lookup for installed/pre-existing crds
 		foundCrd := &apiv1.CustomResourceDefinition{}
-		if err = client.Get(context.TODO(), types.NamespacedName{Name: crd.ObjectMeta.Name}, foundCrd); err != nil {
+		if err = client.Get(context.TODO(), types.NamespacedName{Name: crd.Name}, foundCrd); err != nil {
 			if errors.IsNotFound(err) {
 				// Didn't find CRD, we should create it.
-				log.Info("Creating CRD", "CRD.Name", crd.ObjectMeta.Name)
+				log.Info("Creating CRD", "CRD.Name", crd.Name)
 				if err = client.Create(context.TODO(), crd); err != nil {
 					return err
 				}
@@ -48,7 +48,7 @@ func InstallVeleroCRDs(log logr.Logger, client client.Client) error {
 			// CRD exists, check if it's updated.
 			if !reflect.DeepEqual(foundCrd.Spec, crd.Spec) {
 				// Specs aren't equal, update and fix.
-				log.Info("Updating CRD", "CRD.Name", crd.ObjectMeta.Name, "foundCrd.Spec", foundCrd.Spec, "crd.Spec", crd.Spec)
+				log.Info("Updating CRD", "CRD.Name", crd.Name, "foundCrd.Spec", foundCrd.Spec, "crd.Spec", crd.Spec)
 				foundCrd.Spec = *crd.Spec.DeepCopy()
 				if err = client.Update(context.TODO(), foundCrd); err != nil {
 					return err

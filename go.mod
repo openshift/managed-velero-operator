@@ -6,7 +6,7 @@ toolchain go1.24.2
 
 require (
 	github.com/aws/aws-sdk-go v1.44.307
-	github.com/go-logr/logr v1.2.3
+	github.com/go-logr/logr v1.4.2
 	github.com/google/uuid v1.3.0
 	github.com/openshift/api v0.0.0-20230414143018-3367bc7e6ac7 // release-4.13
 	github.com/openshift/cloud-credential-operator v0.0.0-20230605122545-0621fcaf818f // release-4.13
@@ -24,12 +24,12 @@ require (
 	github.com/operator-framework/operator-lib v0.11.0
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.55.0
 	golang.org/x/oauth2 v0.10.0
-	k8s.io/api v0.26.1
+	k8s.io/api v0.31.1
 	k8s.io/apiextensions-apiserver v0.26.1
-	k8s.io/apimachinery v0.26.1
-	k8s.io/client-go v0.26.1
-	k8s.io/kube-openapi v0.0.0-20230118215034-64b6bb138190
-	sigs.k8s.io/controller-runtime v0.14.4
+	k8s.io/apimachinery v0.31.1
+	k8s.io/client-go v0.31.1
+	k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340
+	sigs.k8s.io/controller-runtime v0.19.0
 )
 
 require (
@@ -59,7 +59,7 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.5.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
-	github.com/google/go-cmp v0.5.9 // indirect
+	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/s2a-go v0.1.4 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.2.5 // indirect
@@ -83,6 +83,7 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/oklog/run v1.1.0 // indirect
+	github.com/onsi/gomega v1.33.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_golang v1.14.0 // indirect
 	github.com/prometheus/client_model v0.3.0 // indirect
@@ -117,7 +118,7 @@ require (
 	k8s.io/klog/v2 v2.90.0 // indirect
 	k8s.io/utils v0.0.0-20230115233650-391b47cb4029 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
-	sigs.k8s.io/yaml v1.3.0 // indirect
+	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
 replace ( //required by velero

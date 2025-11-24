@@ -8,7 +8,7 @@ COPY . .
 RUN make go-build
 
 ####
-FROM registry.access.redhat.com/ubi8/ubi-minimal:8.10-1761032271
+FROM registry.access.redhat.com/ubi8/ubi-minimal:8.10-1763613452
 
 ENV USER_UID=1001 \
     USER_NAME=managed-velero-operator

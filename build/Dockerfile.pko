@@ -1,0 +1,14 @@
+FROM scratch
+
+LABEL com.redhat.component="openshift-managed-velero-operator" \
+      io.k8s.description="managed-velero-operator Operator for OpenShift Dedicated" \
+      description="managed-velero-operator Operator for OpenShift Dedicated" \
+      distribution-scope="public" \
+      name="openshift/managed-velero-operator" \
+      url="https://github.com/openshift/managed-velero-operator" \
+      vendor="Red Hat, Inc." \
+      release="v0.0.0" \
+      version="v0.0.0"
+
+COPY deploy_pko/ /package/
+USER 1001

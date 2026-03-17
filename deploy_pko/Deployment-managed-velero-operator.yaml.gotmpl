@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: managed-velero-operator
+  namespace: openshift-velero
+  labels:
+    name: managed-velero-operator
+  annotations:
+    package-operator.run/phase: deploy
+    package-operator.run/collision-protection: IfNoController
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: managed-velero-operator
+  template:
+    metadata:
+      labels:
+        name: managed-velero-operator
+    spec:
+      serviceAccountName: managed-velero-operator
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - preference:
+              matchExpressions:
+              - key: node-role.kubernetes.io/infra
+                operator: Exists
+            weight: 1
+      tolerations:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/infra
+        operator: Exists
+      containers:
+      - name: managed-velero-operator
+        image: '{{ .config.image }}'
+        command:
+        - managed-velero-operator
+        imagePullPolicy: Always
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: WATCH_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: OPERATOR_NAME
+          value: managed-velero-operator
+        volumeMounts:
+        - name: trusted-ca-bundle
+          mountPath: /etc/pki/ca-trust/extracted/pem
+          readOnly: true
+      volumes:
+      - name: trusted-ca-bundle
+        configMap:
+          name: trusted-ca-bundle
+          defaultMode: 420
+          items:
+          - key: ca-bundle.crt
+            path: tls-ca-bundle.pem

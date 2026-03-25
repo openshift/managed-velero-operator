@@ -12,7 +12,7 @@ parameters:
   - name: IMAGE_DIGEST
     required: true
   - name: NAMESPACE
-    value: openshift-managed-velero-operator
+    value: openshift-velero
   - name: REPO_NAME
     value: managed-velero-operator
     required: true

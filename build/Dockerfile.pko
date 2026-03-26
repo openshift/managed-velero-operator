@@ -10,5 +10,4 @@ LABEL com.redhat.component="openshift-managed-velero-operator" \
       release="v0.0.0" \
       version="v0.0.0"
 
-COPY deploy_pko/ /package/
-USER 1001
+COPY * /package/

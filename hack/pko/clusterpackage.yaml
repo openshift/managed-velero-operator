@@ -42,6 +42,14 @@ objects:
         - 'true'
       resourceApplyMode: Sync
       resources:
+        - apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: openshift-velero
+            labels:
+              openshift.io/cluster-monitoring: "true"
+              pod-security.kubernetes.io/audit: 'baseline'
+              pod-security.kubernetes.io/warn: 'baseline'
         - apiVersion: package-operator.run/v1alpha1
           kind: ClusterPackage
           metadata:

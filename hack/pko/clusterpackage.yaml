@@ -29,17 +29,17 @@ objects:
       name: managed-velero-operator-stage
     spec:
       clusterDeploymentSelector:
-      matchLabels:
-        api.openshift.com/managed: 'true'
-      matchExpressions:
-      - key: api.openshift.com/sts
-        operator: NotIn
-        values:
-        - 'true'
-      - key: api.openshift.com/wif
-        operator: NotIn
-        values:
-        - 'true'
+        matchLabels:
+          api.openshift.com/managed: 'true'
+        matchExpressions:
+        - key: api.openshift.com/sts
+          operator: NotIn
+          values:
+          - 'true'
+        - key: api.openshift.com/wif
+          operator: NotIn
+          values:
+          - 'true'
       resourceApplyMode: Sync
       resources:
         - apiVersion: v1

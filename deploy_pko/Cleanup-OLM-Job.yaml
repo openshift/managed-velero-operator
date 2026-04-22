@@ -86,11 +86,13 @@ spec:
               set -euxo pipefail
               # CUSTOMIZE: Update the label selector for your operator
               # Example pattern: operators.coreos.com/OPERATOR_NAME.NAMESPACE
-              oc -n openshift-velero delete csv -l "operators.coreos.com/managed-velero-operator.openshift-velero" || true
               
               # Delete subscriptions
               oc -n openshift-velero delete subscriptions.operators.coreos.com managed-velero-operator --ignore-not-found=true
               
+              # Delete CSV after deleting subscriptions
+              oc -n openshift-velero delete csv -l "operators.coreos.com/managed-velero-operator.openshift-velero" || true
+
               # Delete operatorgroups
               oc -n openshift-velero delete operatorgroups managed-velero-operator-og --ignore-not-found=true
 

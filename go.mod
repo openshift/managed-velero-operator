@@ -123,7 +123,7 @@ require (
 )
 
 replace ( //required by velero
-	github.com/go-logr/logr => github.com/go-logr/logr v1.4.2
+	github.com/go-logr/logr => github.com/go-logr/logr v1.4.3
 	github.com/go-logr/zapr => github.com/go-logr/zapr v1.2.3
 	github.com/operator-framework/operator-lib => github.com/operator-framework/operator-lib v0.11.0
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring => github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.42.1

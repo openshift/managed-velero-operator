@@ -18,7 +18,7 @@ require (
 	cloud.google.com/go/storage v1.30.1
 	github.com/cblecker/platformutils v0.0.0-20220614175916-ceca9c99a7c1
 	github.com/googleapis/google-cloud-go-testing v0.0.0-20200911160855-bcd43fbb19e8
-	github.com/openshift/operator-custom-metrics v0.5.1-0.20220802235640-dc76a1f15ee8
+	github.com/openshift/operator-custom-metrics v0.5.1
 	github.com/operator-framework/operator-lib v0.11.0
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.55.0
 	golang.org/x/oauth2 v0.34.0

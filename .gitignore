@@ -86,3 +86,4 @@ tags
 
 # saas bundle
 saas-managed-velero-operator-bundle
+.work/

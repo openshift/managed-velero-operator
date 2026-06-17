@@ -12,7 +12,7 @@ require (
 	google.golang.org/api v0.274.0
 )
 
-replace github.com/vmware-tanzu/velero => github.com/openshift/velero v0.10.2-0.20230518025540-34ab2a01f0e3
+replace github.com/vmware-tanzu/velero => github.com/openshift/velero v1.2.0
 
 require (
 	cloud.google.com/go/storage v1.56.0

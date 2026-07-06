@@ -83,7 +83,7 @@ require (
 	github.com/hashicorp/go-hclog v0.14.1 // indirect
 	github.com/hashicorp/go-plugin v1.4.3 // indirect
 	github.com/hashicorp/yamux v0.0.0-20180604194846-3520598351bb // indirect
-	github.com/imdario/mergo v0.3.16 // indirect
+	github.com/imdario/mergo v1.0.2 // indirect
 	github.com/inconshreveable/mousetrap v1.0.1 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect

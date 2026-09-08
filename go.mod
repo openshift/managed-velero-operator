@@ -1,27 +1,24 @@
 module github.com/openshift/managed-velero-operator
 
-go 1.25.8
-
-require (
-	github.com/aws/aws-sdk-go v1.44.307
-	github.com/go-logr/logr v1.4.3
-	github.com/google/uuid v1.6.0
-	github.com/openshift/api v0.0.0-20230803134339-2d9b46419536 // release-4.13
-	github.com/openshift/cloud-credential-operator v0.0.0-20230605122545-0621fcaf818f // release-4.13
-	github.com/vmware-tanzu/velero v1.11.0
-	google.golang.org/api v0.287.1
-)
+go 1.27
 
 replace github.com/vmware-tanzu/velero => github.com/openshift/velero v0.10.2-0.20230518025540-34ab2a01f0e3
 
 require (
 	cloud.google.com/go/storage v1.63.1
+	github.com/aws/aws-sdk-go v1.44.307
 	github.com/cblecker/platformutils v0.0.0-20250718193405-3e8ead3d7ac3
+	github.com/go-logr/logr v1.4.3
+	github.com/google/uuid v1.6.0
 	github.com/googleapis/google-cloud-go-testing v0.0.0-20210719221736-1c9a4c676720
+	github.com/openshift/api v0.0.0-20230803134339-2d9b46419536 // release-4.13
+	github.com/openshift/cloud-credential-operator v0.0.0-20230605122545-0621fcaf818f // release-4.13
 	github.com/openshift/operator-custom-metrics v0.5.1
 	github.com/operator-framework/operator-lib v0.11.0
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.55.0
+	github.com/vmware-tanzu/velero v1.11.0
 	golang.org/x/oauth2 v0.36.0
+	google.golang.org/api v0.287.1
 	k8s.io/api v0.31.1
 	k8s.io/apiextensions-apiserver v0.31.1
 	k8s.io/apimachinery v0.31.1

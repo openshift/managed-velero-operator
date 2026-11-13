@@ -6,28 +6,28 @@ require (
 	github.com/aws/aws-sdk-go v1.44.307
 	github.com/go-logr/logr v1.4.3
 	github.com/google/uuid v1.6.0
-	github.com/openshift/api v0.0.0-20230803134339-2d9b46419536 // release-4.13
-	github.com/openshift/cloud-credential-operator v0.0.0-20230605122545-0621fcaf818f // release-4.13
+	github.com/openshift/api 950d0a970cb7 // release-4.13
+	github.com/openshift/cloud-credential-operator v0.0.0-20261106184921-fba3af8b887d // release-4.13
 	github.com/vmware-tanzu/velero v1.11.0
-	google.golang.org/api v0.287.1
+	google.golang.org/api v0.298.0
 )
 
-replace github.com/vmware-tanzu/velero => github.com/openshift/velero v0.10.2-0.20230518025540-34ab2a01f0e3
+replace github.com/vmware-tanzu/velero => github.com/openshift/velero f60a1ecba7e5
 
 require (
-	cloud.google.com/go/storage v1.63.1
-	github.com/cblecker/platformutils v0.0.0-20250718193405-3e8ead3d7ac3
+	cloud.google.com/go/storage v1.68.0
+	github.com/cblecker/platformutils v0.0.0-20260721232636-83bc396cf919
 	github.com/googleapis/google-cloud-go-testing v0.0.0-20210719221736-1c9a4c676720
 	github.com/openshift/operator-custom-metrics v0.5.1
 	github.com/operator-framework/operator-lib v0.11.0
-	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.55.0
+	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.91.0
 	golang.org/x/oauth2 v0.36.0
-	k8s.io/api v0.31.1
-	k8s.io/apiextensions-apiserver v0.31.1
-	k8s.io/apimachinery v0.31.1
-	k8s.io/client-go v0.31.1
-	k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340
-	sigs.k8s.io/controller-runtime v0.19.0
+	k8s.io/api v0.35.10
+	k8s.io/apiextensions-apiserver v0.35.10
+	k8s.io/apimachinery v0.35.10
+	k8s.io/client-go v0.35.10
+	k8s.io/kube-openapi v0.0.0-20261104182252-5bee61fc5225
+	sigs.k8s.io/controller-runtime v0.23.3
 )
 
 require (
@@ -147,29 +147,29 @@ replace ( //required by velero
 	github.com/go-logr/logr => github.com/go-logr/logr v1.4.3
 	github.com/go-logr/zapr => github.com/go-logr/zapr v1.2.3
 	github.com/operator-framework/operator-lib => github.com/operator-framework/operator-lib v0.11.0
-	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring => github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.42.1
-	k8s.io/api => k8s.io/api v0.26.1
-	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.26.1
-	k8s.io/apimachinery => k8s.io/apimachinery v0.26.1
-	k8s.io/apiserver => k8s.io/apiserver v0.26.1
-	k8s.io/cli-runtime => k8s.io/cli-runtime v0.26.1
-	k8s.io/client-go => k8s.io/client-go v0.26.1
-	k8s.io/cloud-provider => k8s.io/cloud-provider v0.26.1
-	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.26.1
-	k8s.io/code-generator => k8s.io/code-generator v0.26.1
-	k8s.io/component-base => k8s.io/component-base v0.26.1
-	k8s.io/cri-api => k8s.io/cri-api v0.26.1
-	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.26.1
+	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring => github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.91.0
+	k8s.io/api => k8s.io/api v0.35.10
+	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.35.10
+	k8s.io/apimachinery => k8s.io/apimachinery v0.35.10
+	k8s.io/apiserver => k8s.io/apiserver v0.35.10
+	k8s.io/cli-runtime => k8s.io/cli-runtime v0.35.10
+	k8s.io/client-go => k8s.io/client-go v0.35.10
+	k8s.io/cloud-provider => k8s.io/cloud-provider v0.35.10
+	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.35.10
+	k8s.io/code-generator => k8s.io/code-generator v0.35.10
+	k8s.io/component-base => k8s.io/component-base v0.35.10
+	k8s.io/cri-api => k8s.io/cri-api v0.35.10
+	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.35.10
 	k8s.io/klog/v2 => k8s.io/klog/v2 v2.80.1
-	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.26.1
-	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.26.1
-	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20221012153701-172d655c2280
-	k8s.io/kube-proxy => k8s.io/kube-proxy v0.26.1
-	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.26.1
-	k8s.io/kubectl => k8s.io/kubectl v0.26.1
-	k8s.io/kubelet => k8s.io/kubelet v0.26.1
+	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.35.10
+	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.35.10
+	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20261104182252-5bee61fc5225
+	k8s.io/kube-proxy => k8s.io/kube-proxy v0.35.10
+	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.35.10
+	k8s.io/kubectl => k8s.io/kubectl v0.35.10
+	k8s.io/kubelet => k8s.io/kubelet v0.35.10
 	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.26.1
-	k8s.io/metrics => k8s.io/metrics v0.26.1
-	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.26.1
-	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.14.0
+	k8s.io/metrics => k8s.io/metrics v0.35.10
+	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.35.10
+	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.23.3
 )
